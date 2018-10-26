@@ -18,6 +18,20 @@ def main():
                 else if (f)            
                     output(c + 1, 89.89);
         for(;;);
+        
+        string[] arr = new string[10];
+        int[] kek = new int{ 1, 2, 3, 4, 5 };
+
+        while (a > b)
+        {
+            a = a + b;
+            do
+            {
+                b = a - b;
+                c = 100 * 2;
+            }
+            while (g + g2 > c)
+        }
     '''
     prog = mel_parser.parse(prog)
     print(*prog.tree, sep=os.linesep)

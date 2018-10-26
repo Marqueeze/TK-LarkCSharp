@@ -12,7 +12,7 @@ class AstNode(ABC):
             setattr(self, k, v)
 
     @property
-    def childs(self)->Tuple['AstNode', ...]:
+    def children(self)->Tuple['AstNode', ...]:
         return ()
 
     @abstractmethod
@@ -21,21 +21,24 @@ class AstNode(ABC):
 
     @property
     def tree(self)->[str, ...]:
-        res = [str(self)]
-        childs_temp = self.childs
-        for i, child in enumerate(childs_temp):
-            ch0, ch = '├', '│'
-            if i == len(childs_temp) - 1:
-                ch0, ch = '└', ' '
-            res.extend(((ch0 if j == 0 else ch) + ' ' + s for j, s in enumerate(child.tree)))
-        return res
+        try:
+            res = [str(self)]
+            children_temp = self.children
+            for i, child in enumerate(children_temp):
+                ch0, ch = '├', '│'
+                if i == len(children_temp) - 1:
+                    ch0, ch = '└', ' '
+                res.extend(((ch0 if j == 0 else ch) + ' ' + s for j, s in enumerate(child.tree)))
+            return res
+        except AttributeError:
+            print(res, children_temp)
 
     def visit(self, func: Callable[['AstNode'], None])->None:
         func(self)
-        map(func, self.childs)
+        map(func, self.children)
 
     def __getitem__(self, index):
-        return self.childs[index] if index < len(self.childs) else None
+        return self.children[index] if index < len(self.children) else None
 
 
 class ExprNode(AstNode):
@@ -89,7 +92,7 @@ class BinOpNode(ExprNode):
         self.arg2 = arg2
 
     @property
-    def childs(self) -> Tuple[ExprNode, ExprNode]:
+    def children(self) -> Tuple[ExprNode, ExprNode]:
         return self.arg1, self.arg2
 
     def __str__(self)->str:
@@ -108,7 +111,7 @@ class VarsDeclNode(StmtNode):
         self.vars_list = vars_list
 
     @property
-    def childs(self) -> Tuple[ExprNode, ...]:
+    def children(self) -> Tuple[ExprNode, ...]:
         return self.vars_type, (*self.vars_list)
 
     def __str__(self)->str:
@@ -123,7 +126,7 @@ class CallNode(StmtNode):
         self.params = params
 
     @property
-    def childs(self) -> Tuple[IdentNode, ...]:
+    def children(self) -> Tuple[IdentNode, ...]:
         return self.func, (*self.params)
 
     def __str__(self)->str:
@@ -138,7 +141,7 @@ class AssignNode(StmtNode):
         self.val = val
 
     @property
-    def childs(self) -> Tuple[IdentNode, ExprNode]:
+    def children(self) -> Tuple[IdentNode, ExprNode]:
         return self.var, self.val
 
     def __str__(self)->str:
@@ -154,13 +157,13 @@ class IfNode(StmtNode):
         self.else_stmt = else_stmt
 
     @property
-    def childs(self) -> Tuple[ExprNode, StmtNode, Optional[StmtNode]]:
+    def children(self) -> Tuple[ExprNode, StmtNode, Optional[StmtNode]]:
         return (self.cond, self.then_stmt) + ((self.else_stmt, ) if self.else_stmt else tuple())
 
     def __str__(self)->str:
         return 'if'
 
-        
+
 class ForNode(StmtNode):
     def __init__(self, init: Union[StmtNode, None], cond: Union[ExprNode, StmtNode, None],
                  step: Union[StmtNode, None], body: Union[StmtNode, None] = None,
@@ -172,12 +175,12 @@ class ForNode(StmtNode):
         self.body = body if body else _empty
 
     @property
-    def childs(self) -> Tuple[AstNode, ...]:
+    def children(self) -> Tuple[AstNode, ...]:
         return self.init, self.cond, self.step, self.body
 
     def __str__(self)->str:
         return 'for'
-        
+
 
 class StmtListNode(StmtNode):
     def __init__(self, *exprs: StmtNode,
@@ -186,11 +189,90 @@ class StmtListNode(StmtNode):
         self.exprs = exprs
 
     @property
-    def childs(self) -> Tuple[StmtNode, ...]:
+    def children(self) -> Tuple[StmtNode, ...]:
         return self.exprs
 
     def __str__(self)->str:
         return '...'
+
+
+class WhileNode(StmtNode):
+    def __init__(self, cond: Union[ExprNode, StmtNode], body: Union[StmtNode, None],
+                 row: Optional[int] = None, line: Optional[int] = None, **props):
+        super().__init__(row=row, line=line, **props)
+        self.cond = cond if cond else _empty
+        self.body = body if body else _empty
+
+    @property
+    def children(self) -> Tuple[AstNode, ...]:
+        return self.cond, self.body
+
+    def __str__(self) -> str:
+        return 'while'
+
+
+class DoWhileNode(StmtNode):
+    def __init__(self, body: Union[StmtNode, None], cond: Union[ExprNode, StmtNode],
+                 row: Optional[int] = None, line: Optional[int] = None, **props):
+        super().__init__(row=row, line=line, **props)
+        self.cond = cond if cond else _empty
+        self.body = body if body else _empty
+
+    @property
+    def children(self) -> Tuple[AstNode, ...]:
+        return self.cond, self.body
+
+    def __str__(self) -> str:
+        return 'do_while'
+
+
+class ArrayNode(StmtNode):
+    def __init__(self, name: IdentNode, arr_type: IdentNode, length: LiteralNode,
+                 row: Optional[int] = None, line: Optional[int] = None, **props):
+        super().__init__(row=row, line=line, **props)
+        self.name = name
+        self.type = arr_type
+        self.type.name += '[{0}]'.format(length.value)
+        self.contained = ArrayInsidesNode((), row=row, line=line, **props)
+
+    @property
+    def children(self):
+        return self.name, self.type, self.contained
+
+    def __str__(self) -> str:
+        return '='
+
+
+class ValArrayNode(StmtNode):
+    def __init__(self, name: IdentNode, arr_type: IdentNode, *contained,
+                 row: Optional[int] = None, line: Optional[int] = None, **props):
+        super().__init__(row=row, line=line, **props)
+        self.name = name
+        self.type = arr_type
+        self.contained = ArrayInsidesNode(contained, row=row, line=line, **props)
+        self.type.name += '[{0}]'.format(len(contained))
+
+    @property
+    def children(self):
+        return self.name, self.type, self.contained
+
+    def __str__(self) -> str:
+        return '='
+
+
+# maybe add to grammar?
+class ArrayInsidesNode(AstNode):
+    def __init__(self, contained: Tuple,
+                row: Optional[int] = None, line: Optional[int] = None, **props):
+        super().__init__(row=row, line=line, **props)
+        self.contained = contained
+
+    @property
+    def children(self):
+        return tuple(self.contained)
+
+    def __str__(self) -> str:
+        return 'values'
 
 
 _empty = StmtListNode()

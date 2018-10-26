@@ -37,7 +37,8 @@ parser = Lark('''
 
     call: ident "(" ( expr ( "," expr )* )? ")"
 
-    ?group: num | str
+    ?group: num 
+        | str
         | ident
         | call
         | "(" expr ")"
@@ -64,23 +65,29 @@ parser = Lark('''
 
     ?var_decl_inner: ident
         | ident "=" expr  -> assign
-
+        | ident "=" "new" ident "[" expr "]" -> array
+        | ident "=" "new" ident "{" expr ( "," expr )* "}" -> val_array
+   
     vars_decl: ident var_decl_inner ( "," var_decl_inner )*
+        | ident "[]" var_decl_inner
 
     ?simple_stmt: ident "=" expr  -> assign
         | call
 
     ?for_stmt_list: vars_decl
         | ( simple_stmt ( "," simple_stmt )* )?  -> stmt_list
-    ?for_cond: expr
+    ?loop_cond: expr
         |   -> stmt_list
-    ?for_body: stmt
+    ?loop_body: stmt
         | ";"  -> stmt_list
+        
 
     ?stmt: vars_decl ";"
         | simple_stmt ";"
         | "if" "(" expr ")" stmt ("else" stmt)?  -> if
-        | "for" "(" for_stmt_list ";" for_cond ";" for_stmt_list ")" for_body  -> for
+        | "for" "(" for_stmt_list ";" loop_cond ";" for_stmt_list ")" loop_body  -> for
+        | "while" "(" loop_cond ")" loop_body -> while
+        | "do" loop_body "while" "(" loop_cond ")" -> do_while
         | "{" stmt_list "}"
 
     stmt_list: ( stmt ";"* )*
