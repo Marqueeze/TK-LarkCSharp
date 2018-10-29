@@ -62,14 +62,22 @@ parser = Lark('''
         | logical_or OR logical_and  -> bin_op
 
     ?expr: logical_or
+    
+    ?expr_list: expr ( "," expr )* -> expr_list
 
-    ?var_decl_inner: ident
+    ?var_decl_inner: ident  
         | ident "=" expr  -> assign
         | ident "=" "new" ident "[" expr "]" -> array
-        | ident "=" "new" ident "{" expr ( "," expr )* "}" -> val_array
+        | ident "=" "new" ident "{" expr_list "}" -> val_array
    
     vars_decl: ident var_decl_inner ( "," var_decl_inner )*
         | ident "[]" var_decl_inner
+        
+    ?vars_list: (vars_decl ("," vars_decl )* )? -> vars_list
+        
+    ?func_decl_inner: ident "(" vars_list ")" "{" stmt_list? "}" -> func_decl
+    
+    func_decl: ident ident? ident func_decl_inner -> func
 
     ?simple_stmt: ident "=" expr  -> assign
         | call
@@ -89,6 +97,7 @@ parser = Lark('''
         | "while" "(" loop_cond ")" loop_body -> while
         | "do" loop_body "while" "(" loop_cond ")" -> do_while
         | "{" stmt_list "}"
+        | func_decl
 
     stmt_list: ( stmt ";"* )*
 

@@ -2,8 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c1270534-d35f-4948-9f29-2c02bb505e43" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/MathExprLang.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/MathExprLang.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mel_ast.py" beforeDir="false" afterPath="$PROJECT_DIR$/mel_ast.py" afterDir="false" />
@@ -17,40 +15,44 @@
   </component>
   <component name="CoverageDataManager">
     <SUITE FILE_PATH="coverage/TK_LarkCSharp$mel_ast.coverage" NAME="mel_ast Coverage Results" MODIFIED="1540501178060" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/TK_LarkCSharp$main.coverage" NAME="main Coverage Results" MODIFIED="1540508646118" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/TK_LarkCSharp$main.coverage" NAME="main Coverage Results" MODIFIED="1540814165816" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
   <component name="FUSProjectUsageTrigger">
     <session id="-1592614940">
       <usages-collector id="statistics.lifecycle.project">
         <counts>
-          <entry key="project.closed" value="6" />
+          <entry key="project.closed" value="8" />
           <entry key="project.open.time.0" value="1" />
-          <entry key="project.open.time.10" value="2" />
+          <entry key="project.open.time.10" value="3" />
+          <entry key="project.open.time.11" value="1" />
+          <entry key="project.open.time.15" value="1" />
           <entry key="project.open.time.2" value="1" />
           <entry key="project.open.time.4" value="2" />
-          <entry key="project.opened" value="6" />
+          <entry key="project.opened" value="9" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="py" value="2328" />
+          <entry key="dummy" value="8" />
+          <entry key="py" value="4058" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="Python" value="2328" />
+          <entry key="PLAIN_TEXT" value="8" />
+          <entry key="Python" value="4058" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
         <counts>
           <entry key="bat" value="1" />
-          <entry key="py" value="1" />
+          <entry key="py" value="4" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.open">
         <counts>
           <entry key="PLAIN_TEXT" value="1" />
-          <entry key="Python" value="1" />
+          <entry key="Python" value="4" />
         </counts>
       </usages-collector>
     </session>
@@ -60,8 +62,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="330">
-              <caret line="22" column="8" selection-start-line="22" selection-start-column="8" selection-end-line="22" selection-end-column="8" />
+            <state relative-caret-position="207">
+              <caret line="28" column="22" selection-start-line="28" selection-start-column="22" selection-end-line="28" selection-end-column="22" />
               <folding>
                 <element signature="e#0#9#0" expanded="true" />
               </folding>
@@ -72,13 +74,14 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/mel_ast.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="588">
-              <caret line="267" column="34" selection-start-line="267" selection-start-column="34" selection-end-line="267" selection-end-column="34" />
+            <state relative-caret-position="28">
+              <caret line="294" column="98" selection-start-line="294" selection-start-column="98" selection-end-line="294" selection-end-column="98" />
               <folding>
                 <element signature="e#0#35#0" expanded="true" />
-                <marker date="1540508646075" expanded="true" signature="7858:8203" ph="..." />
-                <marker date="1540508646075" expanded="true" signature="8108:8151" ph="..." />
-                <marker date="1540508646075" expanded="true" signature="8201:8203" ph="..." />
+                <marker date="1540814165783" expanded="true" signature="7442:7446" ph="..." />
+                <marker date="1540814165783" expanded="true" signature="8140:8471" ph="..." />
+                <marker date="1540814165783" expanded="true" signature="8999:9616" ph="..." />
+                <marker date="1540814165783" expanded="true" signature="9025:9616" ph="..." />
               </folding>
             </state>
           </provider>
@@ -87,8 +90,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/mel_parser.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="165">
-              <caret line="68" column="8" selection-start-line="68" selection-start-column="8" selection-end-line="68" selection-end-column="8" />
+            <state relative-caret-position="-393">
+              <caret line="75" column="60" selection-start-line="75" selection-start-column="60" selection-end-line="75" selection-end-column="60" />
               <folding>
                 <element signature="e#0#40#0" expanded="true" />
               </folding>
@@ -118,6 +121,8 @@
       <find>for</find>
       <find>expr</find>
       <find>iden</find>
+      <find>expr_list</find>
+      <find>StmtLis</find>
     </findStrings>
     <replaceStrings>
       <replace>line</replace>
@@ -135,8 +140,8 @@
         <option value="$PROJECT_DIR$/mel_intepreter.py" />
         <option value="$PROJECT_DIR$/intepreter_base.py" />
         <option value="$PROJECT_DIR$/parser_base.py" />
-        <option value="$PROJECT_DIR$/main.py" />
         <option value="$PROJECT_DIR$/mel_parser.py" />
+        <option value="$PROJECT_DIR$/main.py" />
         <option value="$PROJECT_DIR$/mel_ast.py" />
       </list>
     </option>
@@ -289,22 +294,22 @@
     <frame x="67" y="25" width="1853" height="1055" extended-state="6" />
     <layout>
       <window_info id="Favorites" order="0" side_tool="true" />
-      <window_info content_ui="combo" id="Project" order="1" visible="true" weight="0.26784727" />
+      <window_info content_ui="combo" id="Project" order="1" visible="true" weight="0.27780852" />
       <window_info id="Structure" order="2" weight="0.25" />
-      <window_info anchor="bottom" id="Messages" />
       <window_info anchor="bottom" id="Event Log" order="0" sideWeight="0.50968456" side_tool="true" weight="0.29837838" />
       <window_info anchor="bottom" id="Version Control" order="1" show_stripe_button="false" />
       <window_info anchor="bottom" id="Python Console" order="2" />
       <window_info anchor="bottom" id="Terminal" order="3" weight="0.32864866" />
       <window_info anchor="bottom" id="Message" order="4" />
       <window_info anchor="bottom" id="Find" order="5" sideWeight="0.4997233" weight="0.32972974" />
-      <window_info anchor="bottom" id="Run" order="6" sideWeight="0.48865524" weight="0.31351352" />
+      <window_info active="true" anchor="bottom" id="Run" order="6" sideWeight="0.48865524" visible="true" weight="0.28108108" />
       <window_info anchor="bottom" id="Debug" order="7" sideWeight="0.49031544" weight="0.29837838" />
       <window_info anchor="bottom" id="Cvs" order="8" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="9" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="10" weight="0.32972974" />
       <window_info anchor="bottom" id="Docker" order="11" show_stripe_button="false" />
       <window_info anchor="bottom" id="Database Changes" order="12" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Messages" order="13" />
       <window_info anchor="right" id="R Graphics" order="0" />
       <window_info anchor="right" id="R Packages" order="1" />
       <window_info anchor="right" id="Commander" order="2" weight="0.4" />
@@ -327,6 +332,16 @@
           <url>file://$PROJECT_DIR$/mel_ast.py</url>
           <line>33</line>
           <option name="timeStamp" value="3" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/mel_ast.py</url>
+          <line>313</line>
+          <option name="timeStamp" value="10" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/mel_ast.py</url>
+          <line>299</line>
+          <option name="timeStamp" value="13" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -422,10 +437,17 @@
     <entry file="file://$PROJECT_DIR$/main.bat">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
+    <entry file="file://$PROJECT_DIR$/venv/lib/python3.6/site-packages/lark/visitors.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="79">
+          <caret line="86" selection-start-line="86" selection-end-line="86" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="330">
-          <caret line="22" column="8" selection-start-line="22" selection-start-column="8" selection-end-line="22" selection-end-column="8" />
+        <state relative-caret-position="207">
+          <caret line="28" column="22" selection-start-line="28" selection-start-column="22" selection-end-line="28" selection-end-column="22" />
           <folding>
             <element signature="e#0#9#0" expanded="true" />
           </folding>
@@ -434,8 +456,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/mel_parser.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="165">
-          <caret line="68" column="8" selection-start-line="68" selection-start-column="8" selection-end-line="68" selection-end-column="8" />
+        <state relative-caret-position="-393">
+          <caret line="75" column="60" selection-start-line="75" selection-start-column="60" selection-end-line="75" selection-end-column="60" />
           <folding>
             <element signature="e#0#40#0" expanded="true" />
           </folding>
@@ -444,13 +466,14 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/mel_ast.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="588">
-          <caret line="267" column="34" selection-start-line="267" selection-start-column="34" selection-end-line="267" selection-end-column="34" />
+        <state relative-caret-position="28">
+          <caret line="294" column="98" selection-start-line="294" selection-start-column="98" selection-end-line="294" selection-end-column="98" />
           <folding>
             <element signature="e#0#35#0" expanded="true" />
-            <marker date="1540508646075" expanded="true" signature="7858:8203" ph="..." />
-            <marker date="1540508646075" expanded="true" signature="8108:8151" ph="..." />
-            <marker date="1540508646075" expanded="true" signature="8201:8203" ph="..." />
+            <marker date="1540814165783" expanded="true" signature="7442:7446" ph="..." />
+            <marker date="1540814165783" expanded="true" signature="8140:8471" ph="..." />
+            <marker date="1540814165783" expanded="true" signature="8999:9616" ph="..." />
+            <marker date="1540814165783" expanded="true" signature="9025:9616" ph="..." />
           </folding>
         </state>
       </provider>

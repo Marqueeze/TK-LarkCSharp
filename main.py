@@ -21,16 +21,23 @@ def main():
         
         string[] arr = new string[10];
         int[] kek = new int{ 1, 2, 3, 4, 5 };
-
-        while (a > b)
+        
+        
+        public int syka(int a, int b) {}
+        
+        
+        public static int sykaBlyat(int a, int b) 
         {
-            a = a + b;
-            do
+            while (a > b)
             {
-                b = a - b;
-                c = 100 * 2;
+                a = a + b;
+                do
+                {
+                    b = a - b;
+                    c = 100 * 2;
+                }
+                while (g + g2 > c)
             }
-            while (g + g2 > c)
         }
     '''
     prog = mel_parser.parse(prog)

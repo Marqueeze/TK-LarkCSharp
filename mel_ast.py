@@ -233,46 +233,95 @@ class ArrayNode(StmtNode):
         self.name = name
         self.type = arr_type
         self.type.name += '[{0}]'.format(length.value)
-        self.contained = ArrayInsidesNode((), row=row, line=line, **props)
 
     @property
     def children(self):
-        return self.name, self.type, self.contained
+        return self.name, self.type
 
     def __str__(self) -> str:
         return '='
 
 
-class ValArrayNode(StmtNode):
-    def __init__(self, name: IdentNode, arr_type: IdentNode, *contained,
+class ExprListNode(AstNode):
+    def __init__(self, *contained,
                  row: Optional[int] = None, line: Optional[int] = None, **props):
-        super().__init__(row=row, line=line, **props)
-        self.name = name
-        self.type = arr_type
-        self.contained = ArrayInsidesNode(contained, row=row, line=line, **props)
-        self.type.name += '[{0}]'.format(len(contained))
-
-    @property
-    def children(self):
-        return self.name, self.type, self.contained
-
-    def __str__(self) -> str:
-        return '='
-
-
-# maybe add to grammar?
-class ArrayInsidesNode(AstNode):
-    def __init__(self, contained: Tuple,
-                row: Optional[int] = None, line: Optional[int] = None, **props):
         super().__init__(row=row, line=line, **props)
         self.contained = contained
 
     @property
+    def length(self):
+        return len(self.contained)
+
+    @property
     def children(self):
-        return tuple(self.contained)
+        return self.contained
 
     def __str__(self) -> str:
         return 'values'
+
+
+class ValArrayNode(StmtNode):
+    def __init__(self, name: IdentNode, arr_type: IdentNode, contained: ExprListNode,
+                 row: Optional[int] = None, line: Optional[int] = None, **props):
+        super().__init__(row=row, line=line, **props)
+        self.name = name
+        self.type = arr_type
+        self.contained = contained
+        self.type.name += '[{0}]'.format(contained.length)
+
+    @property
+    def children(self):
+        return self.name, self.type, self.contained
+
+    def __str__(self) -> str:
+        return '='
+
+
+class VarsListNode(AstNode):
+    def __init__(self, *vars_list,
+                 row: Optional[int] = None, line: Optional[int] = None, **props):
+        super().__init__(row=row, line=line, **props)
+        self.vars_list = vars_list
+
+    @property
+    def children(self):
+        return self.vars_list
+
+    def __str__(self) -> str:
+        return 'vars'
+
+
+class FuncDeclNode(AstNode):
+    def __init__(self, name: IdentNode, params: VarsListNode, stmts: Optional[StmtListNode] = None,
+                 row: Optional[int] = None, line: Optional[int] = None, **props):
+        super().__init__(row=row, line=line, **props)
+        self.name = name
+        self.params = params if params else _empty
+        self.stmts = stmts if stmts else _empty
+
+    @property
+    def children(self):
+        return self.name, self.params, self.stmts
+
+    def __str__(self) -> str:
+        return '='
+
+
+class FuncNode(AstNode):
+    def __init__(self, access: IdentNode, type: IdentNode, inner: FuncDeclNode, static: Optional[IdentNode] = None,
+                 row: Optional[int] = None, line: Optional[int] = None, **props):
+        super().__init__(row=row, line=line, **props)
+        self.access = access
+        self.static = type if static else _empty
+        self.type = type if not static else inner
+        self.inner = inner if not static else static
+
+    @property
+    def children(self):
+        return self.access, self.static, self.type, self.inner
+
+    def __str__(self) -> str:
+        return 'func'
 
 
 _empty = StmtListNode()
