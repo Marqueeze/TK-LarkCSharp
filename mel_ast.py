@@ -73,7 +73,7 @@ class BinOp(Enum):
     DIV = '/'
     GE = '>='
     LE = '<='
-    NEQUALS = '<>'
+    NEQUALS = '!='
     EQUALS = '=='
     GT = '>'
     LT = '<'
@@ -226,20 +226,20 @@ class DoWhileNode(StmtNode):
         return 'do_while'
 
 
-class ArrayNode(StmtNode):
-    def __init__(self, name: IdentNode, arr_type: IdentNode, length: LiteralNode,
-                 row: Optional[int] = None, line: Optional[int] = None, **props):
-        super().__init__(row=row, line=line, **props)
-        self.name = name
-        self.type = arr_type
-        self.type.name += '[{0}]'.format(length.value)
-
-    @property
-    def children(self):
-        return self.name, self.type
-
-    def __str__(self) -> str:
-        return '='
+# class ArrayNode(StmtNode):
+#     def __init__(self, name: IdentNode, arr_type: IdentNode, length: LiteralNode,
+#                  row: Optional[int] = None, line: Optional[int] = None, **props):
+#         super().__init__(row=row, line=line, **props)
+#         self.name = name
+#         self.type = arr_type
+#         self.type.name += '[{0}]'.format(length.value)
+#
+#     @property
+#     def children(self):
+#         return self.name, self.type
+#
+#     def __str__(self) -> str:
+#         return '='
 
 
 class ExprListNode(AstNode):
@@ -260,18 +260,19 @@ class ExprListNode(AstNode):
         return 'values'
 
 
-class ValArrayNode(StmtNode):
-    def __init__(self, name: IdentNode, arr_type: IdentNode, contained: ExprListNode,
+class ArrayNode(StmtNode):
+    def __init__(self, name: IdentNode, arr_type: IdentNode, contained: ExprListNode, length: LiteralNode,
                  row: Optional[int] = None, line: Optional[int] = None, **props):
         super().__init__(row=row, line=line, **props)
         self.name = name
         self.type = arr_type
+        self.length = length
         self.contained = contained
-        self.type.name += '[{0}]'.format(contained.length)
+        # self.type.name += '[{0}]'.format(length)
 
     @property
     def children(self):
-        return self.name, self.type, self.contained
+        return self.name, self.type, self.length, self.contained
 
     def __str__(self) -> str:
         return '='

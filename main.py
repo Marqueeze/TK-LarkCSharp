@@ -23,7 +23,7 @@ def main():
         int[] kek = new int{ 1, 2, 3, 4, 5 };
         
         
-        public int what(nt a, int b) {}
+        public int what(int a, int b) {}
         
         
         public static int whatElse(int a, int b) 

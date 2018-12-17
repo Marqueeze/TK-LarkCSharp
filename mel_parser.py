@@ -68,7 +68,7 @@ parser = Lark('''
     ?var_decl_inner: ident  
         | ident "=" expr  -> assign
         | ident "=" "new" ident "[" expr "]" -> array
-        | ident "=" "new" ident "{" expr_list "}" -> val_array
+        | ident "=" "new" ident "{" expr_list "}" -> array
    
     vars_decl: ident var_decl_inner ( "," var_decl_inner )*
         | ident "[]" var_decl_inner
@@ -115,6 +115,18 @@ class MelASTBuilder(InlineTransformer):
                 return BinOpNode(op, args[0], args[2],
                                  **{ 'token': args[1], 'line': args[1].line, 'column': args[1].column })
             return get_bin_op_node
+        elif item == 'array':
+            def get_array_node(*args):
+                name = args[0]
+                _type = args[1]
+                if isinstance(args[2], LiteralNode):
+                    length = args[2]
+                    values = ExprListNode(*[LiteralNode('0') for i in range(length.value)])
+                else:
+                    length = LiteralNode(str(args[2].length))
+                    values = args[2]
+                return ArrayNode(name, _type, values, length)
+            return get_array_node
         else:
             def get_node(*args):
                 props = {}
