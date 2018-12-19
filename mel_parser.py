@@ -18,7 +18,8 @@ parser = Lark('''
 
     num: NUMBER  -> literal
     str: ESCAPED_STRING  -> literal
-    ident: CNAME
+    ident: CNAME 
+            | CNAME "[" "]" -> arr
 
     ADD:     "+"
     SUB:     "-"
@@ -71,7 +72,6 @@ parser = Lark('''
         | ident "=" "new" ident "{" expr_list "}" -> array
    
     vars_decl: ident var_decl_inner ( "," var_decl_inner )*
-        | ident "[]" var_decl_inner
         
     ?vars_list: (vars_decl ("," vars_decl )* )? -> vars_list
         
@@ -127,6 +127,16 @@ class MelASTBuilder(InlineTransformer):
                     values = args[2]
                 return ArrayNode(name, _type, values, length)
             return get_array_node
+        elif item == 'arr':
+            def get_node(*args):
+                props = {}
+                if len(args) == 1 and isinstance(args[0], Token):
+                    props['token'] = args[0]
+                    props['line'] = args[0].line
+                    props['column'] = args[0].column
+                    args = [args[0].value + '[]']
+                return IdentNode(*args, **props)
+            return get_node
         else:
             def get_node(*args):
                 props = {}

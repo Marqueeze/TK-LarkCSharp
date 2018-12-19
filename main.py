@@ -1,10 +1,12 @@
 import os
 import mel_parser
+from analyzer import *
 
 
 def main():
     prog = '''
         int g, g2 = g, g = 90;
+        string g3 = g * g2 + g;
     
         a = input(); b = input();  /* comment 1
         c = input();
@@ -23,11 +25,12 @@ def main():
         int[] kek = new int{ 1, 2, 3, 4, 5 };
         
         
-        public int what(int a, int b) {}
+        public int[] what(int a, string b) {}
         
         
         public static int whatElse(int a, int b) 
         {
+            int c = 0;
             while (a > b)
             {
                 a = a + b;
@@ -41,6 +44,8 @@ def main():
         }
     '''
     prog = mel_parser.parse(prog)
+    a = Analyzer()
+    a.form_scope(prog)
     print(*prog.tree, sep=os.linesep)
 
 

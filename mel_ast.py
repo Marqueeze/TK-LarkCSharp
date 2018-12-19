@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Tuple, Optional, Union
 from enum import Enum
+from scope import Scope
 
 
 class AstNode(ABC):
@@ -8,6 +9,7 @@ class AstNode(ABC):
         super().__init__()
         self.row = row
         self.line = line
+        self.scope = None
         for k, v in props.items():
             setattr(self, k, v)
 
@@ -21,17 +23,14 @@ class AstNode(ABC):
 
     @property
     def tree(self)->[str, ...]:
-        try:
-            res = [str(self)]
-            children_temp = self.children
-            for i, child in enumerate(children_temp):
-                ch0, ch = '├', '│'
-                if i == len(children_temp) - 1:
-                    ch0, ch = '└', ' '
-                res.extend(((ch0 if j == 0 else ch) + ' ' + s for j, s in enumerate(child.tree)))
-            return res
-        except AttributeError:
-            print(res, children_temp)
+        res = [str(self)]
+        children_temp = self.children
+        for i, child in enumerate(children_temp):
+            ch0, ch = '├', '│'
+            if i == len(children_temp) - 1:
+                ch0, ch = '└', ' '
+            res.extend(((ch0 if j == 0 else ch) + ' ' + s for j, s in enumerate(child.tree)))
+        return res
 
     def visit(self, func: Callable[['AstNode'], None])->None:
         func(self)
