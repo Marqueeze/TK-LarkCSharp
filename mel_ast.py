@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from typing import Callable, Tuple, Optional, Union
 from enum import Enum
 
+from base_type import BaseType
+
 
 class AstNode(ABC):
     def __init__(self, row: Optional[int] = None, line: Optional[int] = None, **props):
@@ -261,7 +263,7 @@ class ExprListNode(AstNode):
 
 
 class ArrayNode(StmtNode):
-    def __init__(self, name: IdentNode, arr_type: IdentNode, contained: ExprListNode, length: LiteralNode,
+    def __init__(self, name: IdentNode, arr_type: BaseType, contained: ExprListNode, length: LiteralNode,
                  row: Optional[int] = None, line: Optional[int] = None, **props):
         super().__init__(row=row, line=line, **props)
         self.name = name
@@ -272,7 +274,7 @@ class ArrayNode(StmtNode):
 
     @property
     def children(self):
-        return self.name, self.type, self.length, self.contained
+        return self.name, self.type.Type, self.length, self.contained
 
     def __str__(self) -> str:
         return '='

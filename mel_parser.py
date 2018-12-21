@@ -1,5 +1,7 @@
 from lark import Lark, InlineTransformer
 from lark.lexer import Token
+
+from base_type import BaseType
 from mel_ast import *
 
 
@@ -65,8 +67,8 @@ parser = Lark('''
     
     ?expr_list: expr ( "," expr )* -> expr_list
 
-    ?var_decl_inner: ident  
-        | ident "=" expr  -> assign
+    ?var_decl_inner: ident  -> ident
+        | ident "=" expr    -> assign
         | ident "=" "new" ident "[" expr "]" -> array
         | ident "=" "new" ident "{" expr_list "}" -> array
    
@@ -118,7 +120,7 @@ class MelASTBuilder(InlineTransformer):
         elif item == 'array':
             def get_array_node(*args):
                 name = args[0]
-                _type = args[1]
+                _type = BaseType(args[1], True)
                 if isinstance(args[2], LiteralNode):
                     length = args[2]
                     values = ExprListNode(*[LiteralNode('0') for i in range(length.value)])
