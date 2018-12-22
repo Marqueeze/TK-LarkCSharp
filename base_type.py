@@ -8,10 +8,13 @@ class BaseType(object):
 
     @property
     def type(self):
-        return self.type
+        return self.v_type
 
     def cast(self, new_type):
         return False
+
+    def __str__(self):
+        return '{0}{1}'.format(self.v_type, '[]' if self.isArray else '')
 
 
 class Int(BaseType):

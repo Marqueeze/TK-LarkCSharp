@@ -1,7 +1,5 @@
 from lark import Lark, InlineTransformer
 from lark.lexer import Token
-
-from base_type import BaseType
 from mel_ast import *
 
 
@@ -20,7 +18,7 @@ parser = Lark('''
 
     num: NUMBER  -> literal
     str: ESCAPED_STRING  -> literal
-    ident: CNAME 
+    ident: CNAME
             | CNAME "[" "]" -> arr
 
     ADD:     "+"
@@ -83,6 +81,7 @@ parser = Lark('''
 
     ?simple_stmt: ident "=" expr  -> assign
         | call
+        | "return" expr -> return
 
     ?for_stmt_list: vars_decl
         | ( simple_stmt ( "," simple_stmt )* )?  -> stmt_list
@@ -120,14 +119,16 @@ class MelASTBuilder(InlineTransformer):
         elif item == 'array':
             def get_array_node(*args):
                 name = args[0]
-                _type = BaseType(args[1], True)
+                v_type = IdentNode(args[1].name + '[]',
+                                   **{'token': args[1], 'line': args[1].line, 'column': args[1].column})
                 if isinstance(args[2], LiteralNode):
                     length = args[2]
-                    values = ExprListNode(*[LiteralNode('0') for i in range(length.value)])
+                    values = ExprListNode(**{'token': args[1], 'line': args[1].line, 'column': args[1].column})
                 else:
                     length = LiteralNode(str(args[2].length))
                     values = args[2]
-                return ArrayNode(name, _type, values, length)
+                return ArrayNode(name, v_type, values, length,
+                                 **{'token': args[1], 'line': args[1].line, 'column': args[1].column})
             return get_array_node
         elif item == 'arr':
             def get_node(*args):

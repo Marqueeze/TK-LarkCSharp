@@ -1,5 +1,6 @@
 from mel_ast import *
 from scope import Scope
+from base_type import *
 
 
 class Analyzer:
@@ -50,3 +51,42 @@ class Analyzer:
             elif isinstance(node, ArrayNode):
                 scope.vars[str(node.name)] = (d_type, s_type)
         return scope
+
+    def analyze(self, tree: AstNode):
+        self.analyze_call(tree)
+
+    def analyze_inner(self, node: AstNode, v_type=None):
+        if isinstance(node, (IfNode, ForNode, WhileNode, DoWhileNode)):
+            v_type = Bool(Types.Bool, False)
+            returned_type = self.analyze_expr(node.cond, v_type)
+            if not v_type.__dict__ == returned_type.__dict__:
+                raise AssertionError("Can't implicitly cast {1} to {0}".format(v_type, returned_type))
+        pass
+
+    def analyze_call(self, node: AstNode, v_type: BaseType=None):
+        if isinstance(node, CallNode):
+            signature = self.find_in_scope(node.scope, node.func.name, 'funcs')
+            #
+            #
+            # param analysis goes HERE!!!
+            #
+            #
+
+        if len(node.children) > 0:
+            for child in node.children:
+                self.analyze_inner(child, v_type)
+
+    def analyze_expr(self, node: ExprNode, v_type: BaseType=None) -> Union[BaseType, None]:
+        return String('string', True)
+
+
+    def find_in_scope(self, scope: Scope, query: str, key: str):
+        try:
+            result = getattr(scope, key)[query]
+            return result
+        except KeyError:
+            if scope.parent is None:
+                raise ValueError('{0} with id "{1}" not found'.format(key[:-1], query))
+            else:
+                self.find_in_scope(scope.parent, query, key)
+

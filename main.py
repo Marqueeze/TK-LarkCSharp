@@ -25,18 +25,21 @@ def main():
         int[] kek = new int{ 1, 2, 3, 4, 5 };
         
         
-        public int[] what(int a, string b) {}
-        
-        
-        public static int whatElse(int a, int b) 
+        public int[] what(int a, string b) 
         {
-            int c = 0;
+            return (a + b) * 10;
+        }
+        
+        
+        public static void whatElse(int a, int b) 
+        {
+            int c = what(a, b);
             while (a > b)
             {
                 a = a + b;
                 do
                 {
-                    b = a - b;
+                    b = a - b * y;
                     c = 100 * 2;
                 }
                 while (g + g2 > c)
@@ -46,6 +49,11 @@ def main():
     prog = mel_parser.parse(prog)
     a = Analyzer()
     a.form_scope(prog)
+    try:
+        a.analyze(prog)
+    except ValueError as e:
+        print(e)
+    print(type(True).__name__)
     print(*prog.tree, sep=os.linesep)
 
 

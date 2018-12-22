@@ -260,7 +260,7 @@ class ExprListNode(AstNode):
 
 
 class ArrayNode(StmtNode):
-    def __init__(self, name: IdentNode, arr_type: BaseType, contained: ExprListNode, length: LiteralNode,
+    def __init__(self, name: IdentNode, arr_type: IdentNode, contained: ExprListNode, length: LiteralNode,
                  row: Optional[int] = None, line: Optional[int] = None, **props):
         super().__init__(row=row, line=line, **props)
         self.name = name
@@ -271,7 +271,7 @@ class ArrayNode(StmtNode):
 
     @property
     def children(self):
-        return self.name, self.type.type, self.length, self.contained
+        return self.name, self.type, self.length, self.contained
 
     def __str__(self) -> str:
         return '='
@@ -322,6 +322,20 @@ class FuncNode(AstNode):
 
     def __str__(self) -> str:
         return 'func'
+
+
+class ReturnNode(AstNode):
+    def __init__(self, expr: ExprNode,
+                 row: Optional[int] = None, line: Optional[int] = None, **props):
+        super().__init__(row=row, line=line, **props)
+        self.expr = expr
+
+    @property
+    def children(self) -> Tuple:
+        return self.expr,
+
+    def __str__(self):
+        return 'returns'
 
 
 _empty = StmtListNode()
