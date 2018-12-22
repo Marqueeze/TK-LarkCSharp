@@ -273,7 +273,7 @@ class ArrayNode(StmtNode):
 
     @property
     def children(self):
-        return self.name, self.type.Type, self.length, self.contained
+        return self.name, self.type.type, self.length, self.contained
 
     def __str__(self) -> str:
         return '='

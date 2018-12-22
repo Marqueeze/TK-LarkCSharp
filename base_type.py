@@ -1,11 +1,14 @@
+from enum import Enum
+
+
 class BaseType(object):
     def __init__(self, _type, _is_array=False):
         self.isArray = _is_array
-        self.Type = _type
+        self.v_type = _type
 
     @property
     def type(self):
-        return self.Type
+        return self.type
 
     def cast(self, new_type):
         return False
@@ -16,9 +19,7 @@ class Int(BaseType):
         super().__init__("int", _is_array)
 
     def cast(self, new_type):
-        if new_type is Double:
-            return True
-        return False
+        isinstance(new_type, Double)
 
 
 class Double(BaseType):
@@ -36,9 +37,7 @@ class Char(BaseType):
         super().__init__("char", _is_array)
 
     def cast(self, new_type):
-        if new_type is String:
-            return True
-        return False
+        return isinstance(new_type, String)
 
 
 class Bool(BaseType):
@@ -46,7 +45,7 @@ class Bool(BaseType):
         super().__init__("bool", _is_array)
 
 
-class Types:
+class Types(Enum):
     Int = "int"
     Double = "double"
     String = "string"
