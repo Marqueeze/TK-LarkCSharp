@@ -1,5 +1,12 @@
+<<<<<<< HEAD
 .idea/*
 __pycache__/
 venv/
 desktop.ini
 main.bat
+=======
+__pycache__/
+.idea/
+venv/
+main.bat
+>>>>>>> 1e3e0b5d56628c5daffa1bda6ff716848999868d
