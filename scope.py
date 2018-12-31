@@ -4,3 +4,6 @@ class Scope:
         self.parent = parent
         self.vars = {}
         self.funcs = {}
+
+    def __str__(self):
+        return self.name

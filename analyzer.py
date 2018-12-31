@@ -1,12 +1,14 @@
 from mel_ast import *
 from scope import Scope
 from base_type import *
+from exception import AnalyzerError
 
 
 class Analyzer:
     def __init__(self):
         self.scope = Scope(name='global')
         self.scopes = []
+        self.type_analogs = {int: Int, str: String, float: Double, bool: Bool}
 
     def form_scope(self, tree: StmtListNode):
         self.form_scope_inner(tree, self.scope, 'global')
@@ -14,18 +16,20 @@ class Analyzer:
     def form_scope_inner(self, node: AstNode, parent: Scope, s_type: str):
         scope = parent
         if isinstance(node, VarsDeclNode):
-            self.vars_decl_scope(scope, str(node.vars_type), s_type, node.vars_list)
+            scope = self.vars_decl_scope(scope, str(node.vars_type), s_type, node.vars_list)
 
         elif isinstance(node, FuncNode):
             s_type = 'local'
             return_type = node.type.name
+            node.scope = scope
             node = node.inner
-            parent.funcs[str(node.name)] = {'r': return_type, 'p': [str(x.children[0]) for x in node.params.vars_list]}
+            scope.funcs[str(node.name)] = {'r': return_type, 'p': [str(x.children[0]) for x in node.params.vars_list]}
             scope = Scope(parent=scope, name=str(node.name))
 
-            for param in node.params.children:
-                self.vars_decl_scope(scope, str(param.vars_type), 'param', param.vars_list)
+            for param in node.params.vars_list:
+                param.scope = self.vars_decl_scope(scope, str(param.vars_type), 'param', param.vars_list)
 
+            node.scope = scope
             node = node.stmts
 
         elif isinstance(node, (ForNode, WhileNode, DoWhileNode, IfNode)):
@@ -39,6 +43,7 @@ class Analyzer:
         else:
             if scope not in self.scopes:
                 self.scopes.append(scope)
+                self.scopes = [x for x in self.scopes if x != scope.parent]
 
         node.scope = scope
 
@@ -50,35 +55,215 @@ class Analyzer:
                 scope.vars[str(node.var)] = (d_type, s_type)
             elif isinstance(node, ArrayNode):
                 scope.vars[str(node.name)] = (d_type, s_type)
+        node.scope = scope
         return scope
 
     def analyze(self, tree: AstNode):
-        self.analyze_call(tree)
+        return self.analyze_inner(tree)
 
-    def analyze_inner(self, node: AstNode, v_type=None):
-        if isinstance(node, (IfNode, ForNode, WhileNode, DoWhileNode)):
-            v_type = Bool(Types.Bool, False)
-            returned_type = self.analyze_expr(node.cond, v_type)
-            if not v_type.__dict__ == returned_type.__dict__:
-                raise AssertionError("Can't implicitly cast {1} to {0}".format(v_type, returned_type))
-        pass
-
-    def analyze_call(self, node: AstNode, v_type: BaseType=None):
-        if isinstance(node, CallNode):
-            signature = self.find_in_scope(node.scope, node.func.name, 'funcs')
-            #
-            #
-            # param analysis goes HERE!!!
-            #
-            #
-
+    def analyze_inner(self, node: AstNode) -> Union[Tuple[AstNode, BaseType], Tuple[AstNode, None]]:
         if len(node.children) > 0:
-            for child in node.children:
-                self.analyze_inner(child, v_type)
+            if isinstance(node, BinOpNode):
+                return self.analyze_bin_op(node)
+            elif isinstance(node, VarsDeclNode):
+                return self.analyze_vars_decl(node), None
+            elif isinstance(node, AssignNode):
+                return self.analyze_assign(node)
+            elif isinstance(node, (WhileNode, DoWhileNode, ForNode, IfNode)):
+                return self.analyze_conditionals(node), None
+            elif isinstance(node, CallNode):
+                return self.analyze_call(node)
+            elif isinstance(node, FuncNode):
+                return self.analyze_func_decl(node), None
+            elif isinstance(node, ArrayNode):
+                return self.analyze_array(node)
+            elif isinstance(node, ExprNode):
+                return self.analyze_inner(node.children[0])
+            else:
+                abstr_node = AbstractNode([], row=node.row, line=node.line)
+                for child in node.children:
+                    node_to_add, _ = self.analyze_inner(child)
+                    abstr_node.ch.append(node_to_add)
+                return abstr_node, None
 
-    def analyze_expr(self, node: ExprNode, v_type: BaseType=None) -> Union[BaseType, None]:
-        return String('string', True)
+        else:
+            if isinstance(node, LiteralNode):
+                v_type = self.get_type(node.value, True)
+                return ConstNode(node.value, v_type, line=node.line, row=node.row), v_type
+            elif isinstance(node, IdentNode):
+                var = self.find_in_scope(node.scope, node.name, 'vars')
+                t = self.get_type(var[0])
+                return TypedNode(node.name, t, var[1], line=node.line, row=node.row), t
+            else:
+                return StmtListNode(), None
 
+    def analyze_bin_op(self, node: BinOpNode) -> Tuple[AstNode, BaseType]:
+        op = str(node)
+        arg1_node, arg1_type = self.analyze_inner(node.arg1)
+        arg2_node, arg2_type = self.analyze_inner(node.arg2)
+        if op in ('&&', '&', '||', '|'):
+            return self.bin_op_bool(node, arg1_node, arg2_node, arg1_type, arg2_type, op)
+        else:
+            return self.bin_op_all(node, arg1_node, arg2_node, arg1_type, arg2_type, op)
+
+    def bin_op_bool(self, node, arg1_node, arg2_node, arg1_type, arg2_type, op):
+        if isinstance(arg1_type, Bool) and isinstance(arg2_type, Bool) and not (arg1_type.isArray or arg2_type.isArray):
+            new_node = BinOpNode(BinOp(op), arg1_node, arg2_node, line=node.line, row=node.row)
+            return new_node, arg1_type
+        else:
+            raise AnalyzerError("Can't compare {0} and {1}".format(arg1_type.type, arg2_type.type))
+
+    def bin_op_all(self, node: BinOpNode, arg1_node, arg2_node, arg1_type, arg2_type, op):
+        if isinstance(arg2_type, Bool) or isinstance(arg1_type, Bool):
+            raise AnalyzerError("Can't do binary operations({0}) with bool variables".format(op))
+        if isinstance(arg1_node, ConstNode) and isinstance(arg2_node, ConstNode):
+            res = eval('{0}{1}{2}'.format(node.arg1.value, op, node.arg2.value))
+            v_type = self.get_type(res, True)
+            return ConstNode(res, v_type, line=node.line, row=node.row), v_type
+        v_type = None
+        arg1_node, res1 = self.get_cast(arg1_type, arg2_type, arg1_node)
+        arg2_node, res2 = self.get_cast(arg2_type, arg1_type, arg2_node)
+        if res1 == -1 and res2 == -1:
+            raise AnalyzerError("Can't implicitly cast {0} to {1} or {1} to {0}".format(arg1_type.type, arg2_type.type))
+        if (res1 == 0 or res2 == 0) or res2 == 1:
+            v_type = arg1_type
+        elif res1 == 1:
+            v_type = arg2_type
+        new_node = BinOpNode(BinOp(op), arg1_node, arg2_node, line=node.line, row=node.row)
+        return (new_node, v_type) if op in ('+', '-', '*', '/') else (new_node, Bool('bool', False))
+
+        # if arg1_type.cast(arg2_type) or arg2_type.cast(arg1_type) and \
+        #         not (isinstance(arg2_type, Bool) or isinstance(arg1_type, Bool)):
+        #     if isinstance(arg1_node, ConstNode) and isinstance(arg2_node, ConstNode):
+        #         res = eval('{0}{1}{2}'.format(node.arg1.value, op, node.arg2.value))
+        #         v_type = self.get_type(res, True)
+        #         return ConstNode(res, v_type, line=node.line, row=node.row), v_type
+        #     elif not isinstance(arg1_type, type(arg2_type)):
+        #         if arg1_type.cast(arg2_type):
+        #             arg1_node = self.get_cast(arg1_type, arg2_type, arg1_node)
+        #             v_type = arg2_type
+        #         else:
+        #             arg2_node = self.get_cast(arg2_type, arg1_type, arg2_node)
+        #             v_type = arg1_type
+        #     new_node = BinOpNode(BinOp(op), arg1_node, arg2_node, line=node.line, row=node.row)
+        #     return (new_node, v_type) if op in ('+', '-', '*', '/') else (new_node, Bool('bool', False))
+        # else:
+        #     if isinstance(arg2_type, Bool) or isinstance(arg1_type, Bool):
+        #         raise AnalyzerError("Can't do binary operations({0}) with bool variables".format(op))
+        #     else:
+        #      raise AnalyzerError("Can't implicitly cast {0} to {1} or {1} to {0}".format(arg1_type.type, arg2_type.type))
+
+    def analyze_vars_decl(self, node: VarsDeclNode) -> AstNode:
+        var_nodes = []
+        v_type = self.get_type(str(node.vars_type))
+        for var in node.vars_list:
+            var_node, var_type = self.analyze_inner(var)
+            var_node, res = self.get_cast(var_type, v_type, var_node)
+            if res == -1:
+                raise AnalyzerError("Can't implicitly cast {0} to {1}".format(var_type, v_type))
+            # if not var_type.cast(v_type):
+            #     raise AnalyzerError("Can't implicitly cast {0} to {1}".format(var_type, v_type))
+            # else:
+            #     if not isinstance(var_type, type(v_type)):
+            #         var_node = self.get_cast(var_type, v_type, var_node)
+            var_nodes.append(var_node)
+        new_node = VarsDeclNode(node.vars_type, *var_nodes, row=node.row, line=node.line)
+        return new_node
+
+    def analyze_assign(self, node: AssignNode) -> Tuple[AstNode, BaseType]:
+        var = self.find_in_scope(node.scope, str(node.var), 'vars')
+        v_type = self.get_type(var[0])
+        var_node = TypedNode(str(node.var), v_type, var[1], row=node.row, line=node.line)
+        val_node, val_type = self.analyze_inner(node.val)
+        val_node, res = self.get_cast(val_type, v_type, val_node)
+        if res == -1:
+            raise AnalyzerError("Can't implicitly cast {0} to {1}".format(val_type, v_type))
+        return AssignNode(var_node, val_node), v_type
+
+    def analyze_conditionals(self, node: Union[WhileNode, DoWhileNode, ForNode, IfNode]) -> AstNode:
+        child_list = []
+        if isinstance(node, ForNode) and isinstance(node.cond, StmtListNode):
+            cond_node, cond_type = StmtListNode(), Bool('bool', False)
+        else:
+            cond_node, cond_type = self.analyze_inner(node.cond)
+        if not isinstance(cond_type, Bool):
+            raise AnalyzerError("Condition must be bool")
+
+        for child in node.children:
+            if node.cond != child:
+                child_node, _ = self.analyze_inner(child)
+                child_list.append(child_node)
+            else:
+                child_list.append(cond_node)
+        new_node = eval(node.__class__.__name__)
+        new_node = new_node(*child_list, row=node.row, line=node.line)
+        return new_node
+
+    def analyze_call(self, node: CallNode) -> Tuple[AstNode, BaseType]:
+        param_list = []
+        param_types = []
+        func_name = node.func.name
+        func_signature = self.find_in_scope(node.scope, func_name, 'funcs')
+        r_type = self.get_type(func_signature['r'])
+        for index, param in enumerate(node.params):
+            param_node, param_type = self.analyze_inner(param)
+            p_type = self.get_type(func_signature['p'][index])
+            param_node, res = self.get_cast(param_type, p_type, param_node)
+            if res == -1:
+                raise AnalyzerError("{0} accepts {1} as argument {2}, {3} was given instead".format(func_name, p_type,
+                                                                                                    index, param_type))
+            param_list.append(param_node)
+            param_types.append(p_type)
+        func_node = TypedFuncNode(func_name, r_type, *param_types)
+        new_node = CallNode(func_node, *param_list, row=node.row, line=node.line)
+        return new_node, r_type
+
+    def analyze_func_decl(self, node: FuncNode) -> AstNode:
+        param_nodes = []
+        stmt_nodes = []
+        if node.type.name == 'void':
+            r_type = Void('void')
+        else:
+            r_type = self.get_type(node.type.name)
+        func_node = node.inner
+        for param in func_node.params.vars_list:
+            if isinstance(param, VarsDeclNode):
+                if len(param.vars_list) != 1:
+                    raise AnalyzerError("Wrong parameter syntax")
+                param_node = self.analyze_vars_decl(param)
+                param_nodes.append(param_node)
+        for stmt in func_node.stmts.children:
+            if isinstance(stmt, ReturnNode):
+                return_node, return_type = self.analyze_inner(stmt.expr)
+                return_node, res = self.get_cast(return_type, r_type, return_node)
+                if res == -1:
+                    raise AnalyzerError("{0} should return {1}, returns {2} instead".format(func_node.name,
+                                                                                            r_type, return_type))
+                return_node = ReturnNode(return_node, row=node.row, line=node.line)
+                stmt_nodes.append(return_node)
+            else:
+                stmt_node, _ = self.analyze_inner(stmt)
+                stmt_nodes.append(stmt_node)
+        func_node = TypedFuncDeclNode(func_node.name, node.access, r_type, stmt_nodes, param_nodes,
+                                      row=node.row, line=node.line)
+        return func_node
+
+    def analyze_array(self, node: ArrayNode) -> Tuple[AstNode, BaseType]:
+        child_nodes = []
+        array_type = self.get_type(node.type.name)
+        check_type = array_type.__class__(array_type.type, False)
+        length_node, length_type = self.analyze_inner(node.length)
+        if not isinstance(length_type, Int):
+            raise AnalyzerError("Array length must be int, {0} given instead".format(length_type))
+        for child in node.contained.children:
+            child_node, child_type = self.analyze_inner(child)
+            child_node, res = self.get_cast(child_type, check_type, child_node)
+            if res == -1:
+                raise AnalyzerError("Can't implicitly cast {0} to {1}".format(child_type, check_type))
+            child_nodes.append(child_node)
+        new_node = TypedArrayDeclNode(node.name, child_nodes, length_node, array_type,
+                                      row=node.row, line=node.line)
+        return new_node, array_type
 
     def find_in_scope(self, scope: Scope, query: str, key: str):
         try:
@@ -86,7 +271,27 @@ class Analyzer:
             return result
         except KeyError:
             if scope.parent is None:
-                raise ValueError('{0} with id "{1}" not found'.format(key[:-1], query))
+                raise AnalyzerError('{0} with id "{1}" not found'.format(key[:-1], query))
             else:
-                self.find_in_scope(scope.parent, query, key)
+                return self.find_in_scope(scope.parent, query, key)
 
+    def get_cast(self, _from: BaseType, _to: BaseType, node: AstNode) -> Tuple[AstNode, int]:
+        if isinstance(_from, type(_to)):
+            return node, 0
+        if not _from.cast(_to):
+            return node, -1
+        cast = CastNode(node, _from, _to)
+        return cast, 1
+
+    def get_type(self, val, is_const=False) -> BaseType:
+        try:
+            if is_const:
+                const_type = self.type_analogs[type(val)]
+                return const_type(const_type.__name__.lower(), False)
+            else:
+                type_arr = (val, False) if val[-2:] != '[]' else (val[:-2], True)
+                return eval(type_arr[0].capitalize())(*type_arr)
+        except NameError:
+            raise AnalyzerError("No such type as {0}".format(val))
+        except TypeError:
+            raise AnalyzerError("Void can only be used in functions")
