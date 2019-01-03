@@ -8,8 +8,8 @@ def main():
         int g = 90;
         string g3 = "kek";
         int t = 4 + 5;
-        
         t = 10 * 12 - (g + g);
+        double sssss = 90;
     
         
         for (int i = 0, j = 8; ((i <= 5)); i = i + 1)
@@ -26,22 +26,22 @@ def main():
         
         public int[] what(int a, int b) 
         {
-            return (a + b) * 10;
+            int[] c = new int{5, 4, 6, 5, 1};
+            return c;
         }
         
         
         public static void whatElse(int a, int b) 
         {
-            int c = what(a, b);
-            while (a > b)
+            int[] c = what(a, b);
+            while (a > b && 1 < 16.16)
             {
                 a = a + b;
                 do
                 {
                     b = a - b * b;
-                    c = 100 * 2;
                 }
-                while (g + t > c)
+                while (g + t > t)
             }
         }
     '''

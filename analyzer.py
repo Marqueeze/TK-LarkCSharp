@@ -55,7 +55,7 @@ class Analyzer:
                 scope.vars[str(node.var)] = (d_type, s_type)
             elif isinstance(node, ArrayNode):
                 scope.vars[str(node.name)] = (d_type, s_type)
-        node.scope = scope
+            node.scope = scope
         return scope
 
     def analyze(self, tree: AstNode):
@@ -111,7 +111,7 @@ class Analyzer:
             new_node = BinOpNode(BinOp(op), arg1_node, arg2_node, line=node.line, row=node.row)
             return new_node, arg1_type
         else:
-            raise AnalyzerError("Can't compare {0} and {1}".format(arg1_type.type, arg2_type.type))
+            raise AnalyzerError("Can't compare {0} and {1}".format(arg1_type, arg2_type))
 
     def bin_op_all(self, node: BinOpNode, arg1_node, arg2_node, arg1_type, arg2_type, op):
         if isinstance(arg2_type, Bool) or isinstance(arg1_type, Bool):
@@ -123,35 +123,15 @@ class Analyzer:
         v_type = None
         arg1_node, res1 = self.get_cast(arg1_type, arg2_type, arg1_node)
         arg2_node, res2 = self.get_cast(arg2_type, arg1_type, arg2_node)
-        if res1 == -1 and res2 == -1:
-            raise AnalyzerError("Can't implicitly cast {0} to {1} or {1} to {0}".format(arg1_type.type, arg2_type.type))
+        if res1 == -1 or res2 == -1:
+            raise AnalyzerError(
+                "Can't implicitly cast {0} to {1} or {1} to {0}".format(arg1_type, arg2_type))
         if (res1 == 0 or res2 == 0) or res2 == 1:
             v_type = arg1_type
         elif res1 == 1:
             v_type = arg2_type
         new_node = BinOpNode(BinOp(op), arg1_node, arg2_node, line=node.line, row=node.row)
         return (new_node, v_type) if op in ('+', '-', '*', '/') else (new_node, Bool('bool', False))
-
-        # if arg1_type.cast(arg2_type) or arg2_type.cast(arg1_type) and \
-        #         not (isinstance(arg2_type, Bool) or isinstance(arg1_type, Bool)):
-        #     if isinstance(arg1_node, ConstNode) and isinstance(arg2_node, ConstNode):
-        #         res = eval('{0}{1}{2}'.format(node.arg1.value, op, node.arg2.value))
-        #         v_type = self.get_type(res, True)
-        #         return ConstNode(res, v_type, line=node.line, row=node.row), v_type
-        #     elif not isinstance(arg1_type, type(arg2_type)):
-        #         if arg1_type.cast(arg2_type):
-        #             arg1_node = self.get_cast(arg1_type, arg2_type, arg1_node)
-        #             v_type = arg2_type
-        #         else:
-        #             arg2_node = self.get_cast(arg2_type, arg1_type, arg2_node)
-        #             v_type = arg1_type
-        #     new_node = BinOpNode(BinOp(op), arg1_node, arg2_node, line=node.line, row=node.row)
-        #     return (new_node, v_type) if op in ('+', '-', '*', '/') else (new_node, Bool('bool', False))
-        # else:
-        #     if isinstance(arg2_type, Bool) or isinstance(arg1_type, Bool):
-        #         raise AnalyzerError("Can't do binary operations({0}) with bool variables".format(op))
-        #     else:
-        #      raise AnalyzerError("Can't implicitly cast {0} to {1} or {1} to {0}".format(arg1_type.type, arg2_type.type))
 
     def analyze_vars_decl(self, node: VarsDeclNode) -> AstNode:
         var_nodes = []
@@ -161,11 +141,6 @@ class Analyzer:
             var_node, res = self.get_cast(var_type, v_type, var_node)
             if res == -1:
                 raise AnalyzerError("Can't implicitly cast {0} to {1}".format(var_type, v_type))
-            # if not var_type.cast(v_type):
-            #     raise AnalyzerError("Can't implicitly cast {0} to {1}".format(var_type, v_type))
-            # else:
-            #     if not isinstance(var_type, type(v_type)):
-            #         var_node = self.get_cast(var_type, v_type, var_node)
             var_nodes.append(var_node)
         new_node = VarsDeclNode(node.vars_type, *var_nodes, row=node.row, line=node.line)
         return new_node
@@ -276,7 +251,7 @@ class Analyzer:
                 return self.find_in_scope(scope.parent, query, key)
 
     def get_cast(self, _from: BaseType, _to: BaseType, node: AstNode) -> Tuple[AstNode, int]:
-        if isinstance(_from, type(_to)):
+        if _from.v_type == _to.v_type and _from.isArray == _to.isArray:
             return node, 0
         if not _from.cast(_to):
             return node, -1

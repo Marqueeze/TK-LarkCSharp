@@ -81,7 +81,6 @@ parser = Lark('''
 
     ?simple_stmt: ident "=" expr  -> assign
         | call
-        | "return" expr -> return
 
     ?for_stmt_list: vars_decl
         | ( simple_stmt ( "," simple_stmt )* )?  -> stmt_list
@@ -99,6 +98,8 @@ parser = Lark('''
         | "do" loop_body "while" "(" loop_cond ")" -> do_while
         | "{" stmt_list "}"
         | func_decl
+        | "return" ident -> return
+        | "return" expr -> return
 
     stmt_list: ( stmt ";"* )*
 

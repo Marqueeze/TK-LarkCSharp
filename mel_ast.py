@@ -351,7 +351,7 @@ class CastNode(AstNode):
         return self.what,
 
     def __str__(self):
-        return 'cast ({0} -> {1})'.format(self._from.type, self._to.type)
+        return 'cast ({0} -> {1})'.format(self._from, self._to)
 
 
 class AbstractNode(AstNode):
