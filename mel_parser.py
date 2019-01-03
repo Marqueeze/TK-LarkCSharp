@@ -98,8 +98,9 @@ parser = Lark('''
         | "do" loop_body "while" "(" loop_cond ")" -> do_while
         | "{" stmt_list "}"
         | func_decl
-        | "return" ident -> return
-        | "return" expr -> return
+        | "return" ident ";" -> return
+        | "return" expr ";" -> return
+        | "return" ";" -> return
 
     stmt_list: ( stmt ";"* )*
 
@@ -120,9 +121,10 @@ class MelASTBuilder(InlineTransformer):
         elif item == 'array':
             def get_array_node(*args):
                 name = args[0]
-                v_type = IdentNode(args[1].name + '[]',
+                v_type = IdentNode(args[1].name,
                                    **{'token': args[1], 'line': args[1].line, 'column': args[1].column})
                 if isinstance(args[2], LiteralNode):
+                    v_type.name += '[]'
                     length = args[2]
                     values = ExprListNode(**{'token': args[1], 'line': args[1].line, 'column': args[1].column})
                 else:

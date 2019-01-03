@@ -136,12 +136,12 @@ class AssignNode(AstNode):
     def __init__(self, var: AstNode, val: AstNode,
                  row: Optional[int] = None, line: Optional[int] = None, **props):
         super().__init__(row=row, line=line, **props)
-        self.var = var
+        self.name = var
         self.val = val
 
     @property
     def children(self) -> Tuple[AstNode, AstNode]:
-        return self.var, self.val
+        return self.name, self.val
 
     def __str__(self)->str:
         return '='
@@ -325,10 +325,10 @@ class FuncNode(AstNode):
 
 
 class ReturnNode(AstNode):
-    def __init__(self, expr: AstNode,
+    def __init__(self, expr: AstNode=None,
                  row: Optional[int] = None, line: Optional[int] = None, **props):
         super().__init__(row=row, line=line, **props)
-        self.expr = expr
+        self.expr = expr if expr else _empty
 
     @property
     def children(self) -> Tuple:
@@ -415,7 +415,7 @@ class TypedFuncDeclNode(AstNode):
 
     @property
     def children(self):
-        return tuple(self.stmts) + tuple(self.params)
+        return tuple(self.params) + tuple(self.stmts)
 
     def __str__(self):
         return '{0} (returns {1})'.format(self.name, self.r_type)
@@ -436,7 +436,6 @@ class TypedArrayDeclNode(AstNode):
 
     def __str__(self):
         return '{0} ({1})'.format(self.name, self.type)
-
 
 
 _empty = StmtListNode()

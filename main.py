@@ -5,11 +5,11 @@ from analyzer import *
 
 def main():
     prog = '''
-        int g = 90;
+        int g = 1 + 2 + 3;
         string g3 = "kek";
         int t = 4 + 5;
         t = 10 * 12 - (g + g);
-        double sssss = 90;
+        double s = 90;
     
         
         for (int i = 0, j = 8; ((i <= 5)); i = i + 1)
@@ -21,12 +21,13 @@ def main():
         for(;;);
         
         string[] arr = new string[10];
-        int[] kek = new int{ 1, 2, 3, 4, 5 };
+        int[] kek = new int[]{ 1, 2, 3, 4, 5 };
         
         
         public int[] what(int a, int b) 
         {
-            int[] c = new int{5, 4, 6, 5, 1};
+            int[] c = new int[]{5, 4, 6, 5, 1};
+            string fff = "asd";
             return c;
         }
         
@@ -43,17 +44,18 @@ def main():
                 }
                 while (g + t > t)
             }
+            return;
         }
     '''
     prog = mel_parser.parse(prog)
     a = Analyzer()
     a.form_scope(prog)
-    THE_prog, _ = a.analyze(prog)
+    the_prog, _ = a.analyze(prog)
     # try:
     #     a.analyze(prog)
     # except ValueError as e:
     #     print(e)
-    print(*THE_prog.tree, sep=os.linesep)
+    print(*the_prog.tree, sep=os.linesep)
 
 
 if __name__ == "__main__":

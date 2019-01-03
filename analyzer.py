@@ -19,18 +19,25 @@ class Analyzer:
             scope = self.vars_decl_scope(scope, str(node.vars_type), s_type, node.vars_list)
 
         elif isinstance(node, FuncNode):
-            s_type = 'local'
-            return_type = node.type.name
-            node.scope = scope
-            node = node.inner
-            scope.funcs[str(node.name)] = {'r': return_type, 'p': [str(x.children[0]) for x in node.params.vars_list]}
-            scope = Scope(parent=scope, name=str(node.name))
+            if scope.is_func_allowed:
+                if self.check_in_scope(scope, str(node.inner.name), 'funcs'):
+                    s_type = 'local'
+                    return_type = node.type.name
+                    node.scope = scope
+                    node = node.inner
+                    scope.funcs[str(node.name)] = {'r': return_type, 'p': [str(x.children[0]) for x in node.params.vars_list]}
+                    scope = Scope(parent=scope, name=str(node.name))
 
-            for param in node.params.vars_list:
-                param.scope = self.vars_decl_scope(scope, str(param.vars_type), 'param', param.vars_list)
+                    for param in node.params.vars_list:
+                        param.scope = self.vars_decl_scope(scope, str(param.vars_type), 'param', param.vars_list)
 
-            node.scope = scope
-            node = node.stmts
+                    node.scope = scope
+                    node = node.stmts
+
+                else:
+                    raise AnalyzerError("{0} has already been initialized".format(str(node.inner.name)))
+            else:
+                raise AnalyzerError("Impossible to initialize functions outside global scope")
 
         elif isinstance(node, (ForNode, WhileNode, DoWhileNode, IfNode)):
             class_name = node.__class__.__name__
@@ -49,12 +56,11 @@ class Analyzer:
 
     def vars_decl_scope(self, scope: Scope, d_type, s_type, nodes: Tuple[AstNode]):
         for node in nodes:
-            if isinstance(node, IdentNode):
-                scope.vars[str(node.name)] = (d_type, s_type)
-            elif isinstance(node, AssignNode):
-                scope.vars[str(node.var)] = (d_type, s_type)
-            elif isinstance(node, ArrayNode):
-                scope.vars[str(node.name)] = (d_type, s_type)
+            if isinstance(node, (IdentNode, ArrayNode, AssignNode)):
+                if self.check_in_scope(scope, str(node.name), 'vars'):
+                    scope.vars[str(node.name)] = (d_type, s_type)
+                else:
+                    raise AnalyzerError("{0} has already been initialized".format(str(node.name)))
             node.scope = scope
         return scope
 
@@ -117,7 +123,7 @@ class Analyzer:
         if isinstance(arg2_type, Bool) or isinstance(arg1_type, Bool):
             raise AnalyzerError("Can't do binary operations({0}) with bool variables".format(op))
         if isinstance(arg1_node, ConstNode) and isinstance(arg2_node, ConstNode):
-            res = eval('{0}{1}{2}'.format(node.arg1.value, op, node.arg2.value))
+            res = eval('{0}{1}{2}'.format(arg1_node.val, op, arg2_node.val))
             v_type = self.get_type(res, True)
             return ConstNode(res, v_type, line=node.line, row=node.row), v_type
         v_type = None
@@ -146,9 +152,9 @@ class Analyzer:
         return new_node
 
     def analyze_assign(self, node: AssignNode) -> Tuple[AstNode, BaseType]:
-        var = self.find_in_scope(node.scope, str(node.var), 'vars')
+        var = self.find_in_scope(node.scope, str(node.name), 'vars')
         v_type = self.get_type(var[0])
-        var_node = TypedNode(str(node.var), v_type, var[1], row=node.row, line=node.line)
+        var_node = TypedNode(str(node.name), v_type, var[1], row=node.row, line=node.line)
         val_node, val_type = self.analyze_inner(node.val)
         val_node, res = self.get_cast(val_type, v_type, val_node)
         if res == -1:
@@ -194,6 +200,7 @@ class Analyzer:
         return new_node, r_type
 
     def analyze_func_decl(self, node: FuncNode) -> AstNode:
+        has_return = False
         param_nodes = []
         stmt_nodes = []
         if node.type.name == 'void':
@@ -209,16 +216,23 @@ class Analyzer:
                 param_nodes.append(param_node)
         for stmt in func_node.stmts.children:
             if isinstance(stmt, ReturnNode):
+                has_return = True
                 return_node, return_type = self.analyze_inner(stmt.expr)
+                if not return_type:
+                    return_type = Void('void')
                 return_node, res = self.get_cast(return_type, r_type, return_node)
                 if res == -1:
                     raise AnalyzerError("{0} should return {1}, returns {2} instead".format(func_node.name,
                                                                                             r_type, return_type))
                 return_node = ReturnNode(return_node, row=node.row, line=node.line)
                 stmt_nodes.append(return_node)
+                break
             else:
                 stmt_node, _ = self.analyze_inner(stmt)
                 stmt_nodes.append(stmt_node)
+
+        if not (isinstance(r_type, Void) or has_return):
+            raise AnalyzerError("{0} doesn't return anything".format(func_node.name))
         func_node = TypedFuncDeclNode(func_node.name, node.access, r_type, stmt_nodes, param_nodes,
                                       row=node.row, line=node.line)
         return func_node
@@ -249,6 +263,16 @@ class Analyzer:
                 raise AnalyzerError('{0} with id "{1}" not found'.format(key[:-1], query))
             else:
                 return self.find_in_scope(scope.parent, query, key)
+
+    def check_in_scope(self, scope: Scope, query: str, key: str) -> bool:
+        try:
+            result = getattr(scope, key)[query]
+            return False
+        except KeyError:
+            if scope.parent is None:
+                return True
+            else:
+                return self.check_in_scope(scope.parent, query, key)
 
     def get_cast(self, _from: BaseType, _to: BaseType, node: AstNode) -> Tuple[AstNode, int]:
         if _from.v_type == _to.v_type and _from.isArray == _to.isArray:
