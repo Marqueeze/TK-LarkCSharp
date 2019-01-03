@@ -20,6 +20,7 @@ parser = Lark('''
     str: ESCAPED_STRING  -> literal
     ident: CNAME
             | CNAME "[" "]" -> arr
+            | ident "[" expr "]" -> index
 
     ADD:     "+"
     SUB:     "-"
@@ -98,9 +99,7 @@ parser = Lark('''
         | "do" loop_body "while" "(" loop_cond ")" -> do_while
         | "{" stmt_list "}"
         | func_decl
-        | "return" ident ";" -> return
-        | "return" expr ";" -> return
-        | "return" ";" -> return
+        | "return" ( ident ";" | expr ";" | ";") -> return
 
     stmt_list: ( stmt ";"* )*
 

@@ -5,6 +5,8 @@ from analyzer import *
 
 def main():
     prog = '''
+        int[] aaa = new int[10];
+        aaa[0] = 10;
         int g = 1 + 2 + 3;
         string g3 = "kek";
         int t = 4 + 5;
@@ -35,6 +37,8 @@ def main():
         public static void whatElse(int a, int b) 
         {
             int[] c = what(a, b);
+            c[a + b] = 0;
+            int e = c[3];
             while (a > b && 1 < 16.16)
             {
                 a = a + b;
@@ -48,6 +52,7 @@ def main():
         }
     '''
     prog = mel_parser.parse(prog)
+    print(*prog.tree, sep=os.linesep)
     a = Analyzer()
     a.form_scope(prog)
     the_prog, _ = a.analyze(prog)

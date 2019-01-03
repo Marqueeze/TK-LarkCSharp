@@ -1,3 +1,5 @@
+import copy
+
 from mel_ast import *
 from scope import Scope
 from base_type import *
@@ -83,6 +85,8 @@ class Analyzer:
                 return self.analyze_func_decl(node), None
             elif isinstance(node, ArrayNode):
                 return self.analyze_array(node)
+            elif isinstance(node, IndexNode):
+                return self.analyze_index(node)
             elif isinstance(node, ExprNode):
                 return self.analyze_inner(node.children[0])
             else:
@@ -152,9 +156,7 @@ class Analyzer:
         return new_node
 
     def analyze_assign(self, node: AssignNode) -> Tuple[AstNode, BaseType]:
-        var = self.find_in_scope(node.scope, str(node.name), 'vars')
-        v_type = self.get_type(var[0])
-        var_node = TypedNode(str(node.name), v_type, var[1], row=node.row, line=node.line)
+        var_node, v_type = self.analyze_inner(node.name)
         val_node, val_type = self.analyze_inner(node.val)
         val_node, res = self.get_cast(val_type, v_type, val_node)
         if res == -1:
@@ -253,6 +255,17 @@ class Analyzer:
         new_node = TypedArrayDeclNode(node.name, child_nodes, length_node, array_type,
                                       row=node.row, line=node.line)
         return new_node, array_type
+
+    def analyze_index(self, node: IndexNode) -> Tuple[AstNode, BaseType]:
+        arr_node, arr_type = self.analyze_inner(node.ident)
+        arr_type = copy.deepcopy(arr_type)
+        arr_type.isArray = False
+        index_node, index_type = self.analyze_inner(node.index)
+        index_node, res = self.get_cast(index_type, Int('int'), node)
+        if res == -1:
+            raise AnalyzerError("Index must be int, {0} given instead".format(index_type))
+        new_node = IndexNode(arr_node, index_node, row=node.row, line=node.line)
+        return new_node, arr_type
 
     def find_in_scope(self, scope: Scope, query: str, key: str):
         try:

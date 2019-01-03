@@ -225,22 +225,6 @@ class DoWhileNode(AstNode):
         return 'do_while'
 
 
-# class ArrayNode(StmtNode):
-#     def __init__(self, name: IdentNode, arr_type: IdentNode, length: LiteralNode,
-#                  row: Optional[int] = None, line: Optional[int] = None, **props):
-#         super().__init__(row=row, line=line, **props)
-#         self.name = name
-#         self.type = arr_type
-#         self.type.name += '[{0}]'.format(length.value)
-#
-#     @property
-#     def children(self):
-#         return self.name, self.type
-#
-#     def __str__(self) -> str:
-#         return '='
-
-
 class ExprListNode(AstNode):
     def __init__(self, *contained,
                  row: Optional[int] = None, line: Optional[int] = None, **props):
@@ -336,6 +320,21 @@ class ReturnNode(AstNode):
 
     def __str__(self):
         return 'returns'
+
+
+class IndexNode(AstNode):
+    def __init__(self, ident, index,
+                 row: Optional[int] = None, line: Optional[int] = None, **props):
+        super().__init__(row=row, line=line, **props)
+        self.ident = ident
+        self.index = index
+
+    @property
+    def children(self):
+        return self.ident, self.index
+
+    def __str__(self):
+        return str(self.ident)
 
 
 class CastNode(AstNode):
