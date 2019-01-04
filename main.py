@@ -5,9 +5,10 @@ from analyzer import *
 
 def main():
     prog = '''
+        int g = 1 - 2 - 3;
+        bool axx = true;
         int[] aaa = new int[10];
         aaa[0] = 10;
-        int g = 1 + 2 + 3;
         string g3 = "kek";
         int t = 4 + 5;
         t = 10 * 12 - (g + g);
@@ -52,9 +53,8 @@ def main():
         }
     '''
     prog = mel_parser.parse(prog)
-    print(*prog.tree, sep=os.linesep)
+    # print(*prog.tree, sep=os.linesep)
     a = Analyzer()
-    a.form_scope(prog)
     the_prog, _ = a.analyze(prog)
     # try:
     #     a.analyze(prog)

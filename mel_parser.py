@@ -19,8 +19,8 @@ parser = Lark('''
     num: NUMBER  -> literal
     str: ESCAPED_STRING  -> literal
     ident: CNAME
-            | CNAME "[" "]" -> arr
-            | ident "[" expr "]" -> index
+        | CNAME "[" "]" -> arr
+        | ident "[" expr "]" -> index
 
     ADD:     "+"
     SUB:     "-"
@@ -36,11 +36,13 @@ parser = Lark('''
     EQUALS:  "=="
     GT:      ">"
     LT:      "<"
+    BOOL.2:  ("true" | "false")
 
     call: ident "(" ( expr ( "," expr )* )? ")"
 
     ?group: num 
         | str
+        | BOOL -> bool
         | ident
         | call
         | "(" expr ")"
@@ -141,6 +143,15 @@ class MelASTBuilder(InlineTransformer):
                     props['column'] = args[0].column
                     args = [args[0].value + '[]']
                 return IdentNode(*args, **props)
+            return get_node
+        elif item == 'bool':
+            def get_node(*args):
+                props = {}
+                if len(args) == 1 and isinstance(args[0], Token):
+                    props['token'] = args[0]
+                    props['line'] = args[0].line
+                    props['column'] = args[0].column
+                return LiteralNode('True' if args[0].value == 'true' else 'False', **props)
             return get_node
         else:
             def get_node(*args):

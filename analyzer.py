@@ -66,7 +66,8 @@ class Analyzer:
             node.scope = scope
         return scope
 
-    def analyze(self, tree: AstNode):
+    def analyze(self, tree: StmtListNode):
+        self.form_scope(tree)
         return self.analyze_inner(tree)
 
     def analyze_inner(self, node: AstNode) -> Union[Tuple[AstNode, BaseType], Tuple[AstNode, None]]:
