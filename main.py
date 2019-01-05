@@ -1,6 +1,7 @@
 import os
 import mel_parser
-from analyzer import *
+from analyzer import Analyzer
+from code_generator import CodeGenerator
 
 
 def main():
@@ -11,6 +12,7 @@ def main():
         aaa[0] = 10;
         string g3 = "kek";
         int t = 4 + 5;
+        double wow = g + t;
         t = 10 * 12 - (g + g);
         double s = 90;
     
@@ -40,7 +42,7 @@ def main():
             int[] c = what(a, b);
             c[a + b] = 0;
             int e = c[3];
-            while (a > b && 1 < 16.16)
+            while (true)
             {
                 a = a + b;
                 do
@@ -56,11 +58,14 @@ def main():
     # print(*prog.tree, sep=os.linesep)
     a = Analyzer()
     the_prog, _ = a.analyze(prog)
+    gen = CodeGenerator(the_prog, '')
     # try:
     #     a.analyze(prog)
     # except ValueError as e:
     #     print(e)
     print(*the_prog.tree, sep=os.linesep)
+    # print(gen.generate()[0])
+    # print(gen.constants)
 
 
 if __name__ == "__main__":

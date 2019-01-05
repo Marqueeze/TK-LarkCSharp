@@ -71,6 +71,8 @@ class Analyzer:
         return self.analyze_inner(tree)
 
     def analyze_inner(self, node: AstNode) -> Union[Tuple[AstNode, BaseType], Tuple[AstNode, None]]:
+        if isinstance(node, ReturnNode) and node.scope.name == 'global':
+            raise AnalyzerError('Nothing to return without a function')
         if len(node.children) > 0:
             if isinstance(node, BinOpNode):
                 return self.analyze_bin_op(node)
@@ -100,6 +102,8 @@ class Analyzer:
         else:
             if isinstance(node, LiteralNode):
                 v_type = self.get_type(node.value, True)
+                if isinstance(v_type, String) and node.literal[0] == "'":
+                    v_type = Char('char', False)
                 return ConstNode(node.value, v_type, line=node.line, row=node.row), v_type
             elif isinstance(node, IdentNode):
                 var = self.find_in_scope(node.scope, node.name, 'vars')
@@ -203,7 +207,6 @@ class Analyzer:
         return new_node, r_type
 
     def analyze_func_decl(self, node: FuncNode) -> AstNode:
-        has_return = False
         param_nodes = []
         stmt_nodes = []
         if node.type.name == 'void':
@@ -217,9 +220,23 @@ class Analyzer:
                     raise AnalyzerError("Wrong parameter syntax")
                 param_node = self.analyze_vars_decl(param)
                 param_nodes.append(param_node)
+
+        returns = list(self.find_returns(func_node.stmts))
+        if not (isinstance(r_type, Void) or len(returns) != 0):
+            raise AnalyzerError("{0} doesn't return anything".format(func_node.name))
+        for return_node in returns:
+            if return_node in func_node.stmts.children:
+                continue
+            return_node, return_type = self.analyze_inner(return_node.expr)
+            if not return_type:
+                return_type = Void('void')
+            return_node, res = self.get_cast(return_type, r_type, return_node)
+            if res == -1:
+                raise AnalyzerError("{0} should return {1}, returns {2} instead".format(func_node.name,
+                                                                                        r_type, return_type))
+
         for stmt in func_node.stmts.children:
             if isinstance(stmt, ReturnNode):
-                has_return = True
                 return_node, return_type = self.analyze_inner(stmt.expr)
                 if not return_type:
                     return_type = Void('void')
@@ -234,8 +251,6 @@ class Analyzer:
                 stmt_node, _ = self.analyze_inner(stmt)
                 stmt_nodes.append(stmt_node)
 
-        if not (isinstance(r_type, Void) or has_return):
-            raise AnalyzerError("{0} doesn't return anything".format(func_node.name))
         func_node = TypedFuncDeclNode(func_node.name, node.access, r_type, stmt_nodes, param_nodes,
                                       row=node.row, line=node.line)
         return func_node
@@ -267,6 +282,14 @@ class Analyzer:
             raise AnalyzerError("Index must be int, {0} given instead".format(index_type))
         new_node = IndexNode(arr_node, index_node, row=node.row, line=node.line)
         return new_node, arr_type
+
+    def find_returns(self, node: AstNode):
+        if len(node.children) > 0:
+            for child in node.children:
+                if isinstance(child, ReturnNode):
+                    yield child
+                    return
+                yield from self.find_returns(child)
 
     def find_in_scope(self, scope: Scope, query: str, key: str):
         try:
