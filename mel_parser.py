@@ -1,7 +1,5 @@
 from lark import Lark, InlineTransformer
 from lark.lexer import Token
-
-from base_type import BaseType
 from mel_ast import *
 
 
@@ -19,9 +17,11 @@ parser = Lark('''
     %ignore COMMENT
 
     num: NUMBER  -> literal
+    char: SINGLE_QUOTATION_MARK /.{1}/ SINGLE_QUOTATION_MARK -> char
     str: ESCAPED_STRING  -> literal
-    ident: CNAME 
-            | CNAME "[" "]" -> arr
+    ident: CNAME
+        | CNAME "[" "]" -> arr
+        | ident "[" expr "]" -> index
 
     ADD:     "+"
     SUB:     "-"
@@ -37,11 +37,15 @@ parser = Lark('''
     EQUALS:  "=="
     GT:      ">"
     LT:      "<"
+    SINGLE_QUOTATION_MARK: "'"
+    BOOL.2:  ("true" | "false")
 
     call: ident "(" ( expr ( "," expr )* )? ")"
 
     ?group: num 
         | str
+        | char
+        | BOOL -> bool
         | ident
         | call
         | "(" expr ")"
@@ -100,6 +104,7 @@ parser = Lark('''
         | "do" loop_body "while" "(" loop_cond ")" -> do_while
         | "{" stmt_list "}"
         | func_decl
+        | "return" ( ident ";" | expr ";" | ";") -> return
 
     stmt_list: ( stmt ";"* )*
 
@@ -120,14 +125,17 @@ class MelASTBuilder(InlineTransformer):
         elif item == 'array':
             def get_array_node(*args):
                 name = args[0]
-                _type = BaseType(args[1], True)
+                v_type = IdentNode(args[1].name,
+                                   **{'token': args[1], 'line': args[1].line, 'column': args[1].column})
                 if isinstance(args[2], LiteralNode):
+                    v_type.name += '[]'
                     length = args[2]
-                    values = ExprListNode(*[LiteralNode('0') for i in range(length.value)])
+                    values = ExprListNode(**{'token': args[1], 'line': args[1].line, 'column': args[1].column})
                 else:
                     length = LiteralNode(str(args[2].length))
                     values = args[2]
-                return ArrayNode(name, _type, values, length)
+                return ArrayNode(name, v_type, values, length,
+                                 **{'token': args[1], 'line': args[1].line, 'column': args[1].column})
             return get_array_node
         elif item == 'arr':
             def get_node(*args):
@@ -138,6 +146,25 @@ class MelASTBuilder(InlineTransformer):
                     props['column'] = args[0].column
                     args = [args[0].value + '[]']
                 return IdentNode(*args, **props)
+            return get_node
+        elif item == 'bool':
+            def get_node(*args):
+                props = {}
+                if len(args) == 1 and isinstance(args[0], Token):
+                    props['token'] = args[0]
+                    props['line'] = args[0].line
+                    props['column'] = args[0].column
+                return LiteralNode('True' if args[0].value == 'true' else 'False', **props)
+            return get_node
+        elif item == 'char':
+            def get_node(*args):
+                props = {}
+                if len(args) == 1 and isinstance(args[0], Token):
+                    props['token'] = args[0]
+                    props['line'] = args[0].line
+                    props['column'] = args[0].column
+                    args = [args[0].value]
+                return LiteralNode(args[0].value + args[1].value + args[2].value, **props)
             return get_node
         else:
             def get_node(*args):
