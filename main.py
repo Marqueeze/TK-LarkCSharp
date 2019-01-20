@@ -8,7 +8,8 @@ def main():
     prog = '''
         int g = 1 - 2 - 3;
         bool axx = true;
-        int[] aaa = new int[10];
+        int[] aaa = new int[] {1, 2};
+        int[] bbb = new int[] {1, 2};
         aaa[0] = 10;
         string g3 = "kek";
         int t = 4 + 5;
