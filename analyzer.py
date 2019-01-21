@@ -27,7 +27,8 @@ class Analyzer:
                     return_type = node.type.name
                     node.scope = scope
                     node = node.inner
-                    scope.funcs[str(node.name)] = {'r': return_type, 'p': [str(x.children[0]) for x in node.params.vars_list]}
+                    scope.funcs[str(node.name)] = \
+                        {'r': return_type, 'p': [str(x.children[0]) for x in node.params.vars_list]}
                     scope = Scope(parent=scope, name=str(node.name))
 
                     for param in node.params.vars_list:
@@ -59,6 +60,8 @@ class Analyzer:
     def vars_decl_scope(self, scope: Scope, d_type, s_type, nodes: Tuple[AstNode]):
         for node in nodes:
             if isinstance(node, (IdentNode, ArrayNode, AssignNode)):
+                if isinstance(node, (ArrayNode, AssignNode)):
+                    node.is_reassignment = False
                 if self.check_in_scope(scope, str(node.name), 'vars'):
                     scope.vars[str(node.name)] = (d_type, s_type)
                 else:
@@ -161,14 +164,21 @@ class Analyzer:
         return new_node
 
     def analyze_assign(self, node: AssignNode) -> Tuple[AstNode, BaseType]:
+        if node.scope.name == 'global' and node.is_reassignment:
+            raise AnalyzerError('Cannot reassign global values')
+
         var_node, v_type = self.analyze_inner(node.name)
         val_node, val_type = self.analyze_inner(node.val)
         val_node, res = self.get_cast(val_type, v_type, val_node)
+
         if res == -1:
             raise AnalyzerError("Can't implicitly cast {0} to {1}".format(val_type, v_type))
+
         return AssignNode(var_node, val_node), v_type
 
     def analyze_conditionals(self, node: Union[WhileNode, DoWhileNode, ForNode, IfNode]) -> AstNode:
+        if node.__class__.__name__ in node.scope.parent.illegal_nodes:
+            raise AnalyzerError('Illegal code in global scope')
         child_list = []
         if isinstance(node, ForNode) and isinstance(node.cond, StmtListNode):
             cond_node, cond_type = StmtListNode(), Bool('bool', False)
@@ -256,6 +266,8 @@ class Analyzer:
         return func_node
 
     def analyze_array(self, node: ArrayNode) -> Tuple[AstNode, BaseType]:
+        if node.scope.name == 'global' and node.is_reassignment:
+            raise AnalyzerError('Cannot reassign global values')
         child_nodes = []
         array_type = self.get_type(node.type.name)
         check_type = array_type.__class__(array_type.type, False)

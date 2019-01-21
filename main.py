@@ -7,24 +7,7 @@ from code_generator import CodeGenerator
 def main():
     prog = '''
         int g = 1 - 2 - 3;
-        bool axx = true;
-        int[] aaa = new int[] {1, 2};
-        int[] bbb = new int[] {1, 2};
-        aaa[0] = 10;
-        string g3 = "kek";
-        int t = 4 + 5;
-        double wow = g + t;
-        t = 10 * 12 - (g + g);
-        double s = 90;
-    
-        
-        for (int i = 0, j = 8; ((i <= 5)); i = i + 1)
-            for(; t < g;)
-                if (t > 7 + g) {
-                    t = t + g * (2 - 1) + 0;  // comment 2
-                    g3 = "98\tура";
-                }
-        for(;;);
+        int t = 0;
         
         string[] arr = new string[10];
         int[] kek = new int[]{ 1, 2, 3, 4, 5 };
@@ -32,6 +15,7 @@ def main():
         
         public int[] what(int a, int b) 
         {
+            int gh = 100 * a - b / 23;
             int[] c = new int[]{5, 4, 6, 5, 1};
             string fff = "asd";
             return c;
@@ -60,6 +44,7 @@ def main():
     a = Analyzer()
     the_prog, _ = a.analyze(prog)
     gen = CodeGenerator(the_prog, '')
+    gen.generate()
     # try:
     #     a.analyze(prog)
     # except ValueError as e:
