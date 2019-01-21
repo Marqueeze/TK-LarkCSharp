@@ -14,6 +14,8 @@ def main():
         string[] arr = new string[10];
         int[] kek = new int[]{ 1, 2, 3, 4, 5 };
         
+        void pppppppp(int abc, char[] thhhh) { }
+        
         
         public int[] what(int a, int b) 
         {

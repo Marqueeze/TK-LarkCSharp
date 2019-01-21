@@ -294,13 +294,14 @@ class FuncDeclNode(AstNode):
 
 
 class FuncNode(AstNode):
-    def __init__(self, access: IdentNode, type: IdentNode, inner: FuncDeclNode, static: Optional[IdentNode]=None,
+    def __init__(self, type: IdentNode, inner: FuncDeclNode,
+                 access: Optional[IdentNode] = None, static: Optional[IdentNode] = None,
                  row: Optional[int] = None, line: Optional[int] = None, **props):
         super().__init__(row=row, line=line, **props)
-        self.access = access
-        self.static = type if static else _empty
-        self.type = type if not static else inner
-        self.inner = inner if not static else static
+        self.access = access if access else _empty
+        self.static = static if static else _empty
+        self.type = type
+        self.inner = inner
 
     @property
     def children(self):

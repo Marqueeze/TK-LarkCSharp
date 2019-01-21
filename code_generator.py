@@ -1,22 +1,5 @@
 from mel_ast import *
-from collections import deque
-from base_type import *
-
-
-class FunctionCode:
-    def __init__(self, name: str, *params):
-        self.func_name = name
-        self.params = params
-        self.declaration_block = []
-        # self.binops = deque()
-        self.main_block = deque()
-        self.code = ''
-
-    def add_decl(self, decl_code: str):
-        self.declaration_block.append(decl_code)
-
-    def add_operation(self, bin_op_code: Tuple):
-        self.main_block.extend(bin_op_code)
+from FunctionCode import FunctionCode
 
 
 class CodeGenerator:
@@ -91,7 +74,7 @@ class CodeGenerator:
     def get_type(self, node) -> str:
         pass
 
-    def generate_bin_op(self, node: BinOpNode, current=None):
+    def generate_bin_op(self, node: BinOpNode, current: FunctionCode = None):
         if current:
             arg1_code, v_type = self.generate_inner(node.arg1, current)
             arg2_code, _ = self.generate_inner(node.arg2, current)
@@ -101,8 +84,7 @@ class CodeGenerator:
             return '_' + str(node), v_type
         return '', ''
 
-    def generate_assign(self, node: AssignNode, current=None):
-
+    def generate_assign(self, node: AssignNode, current: FunctionCode = None):
         pass
 
     def generate_function(self, node: TypedFuncDeclNode):

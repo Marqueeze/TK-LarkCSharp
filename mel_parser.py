@@ -83,7 +83,7 @@ parser = Lark('''
         
     ?func_decl_inner: ident "(" vars_list ")" "{" stmt_list? "}" -> func_decl
     
-    func_decl: ident ident? ident func_decl_inner -> func
+    func_decl: (ident) ~ 0..2 ident func_decl_inner -> func
 
     ?simple_stmt: ident "=" expr  -> assign
         | call
@@ -146,6 +146,18 @@ class MelASTBuilder(InlineTransformer):
                     props['column'] = args[0].column
                     args = [args[0].value + '[]']
                 return IdentNode(*args, **props)
+            return get_node
+        elif item == 'func':
+            def get_node(*args):
+                if len(args) == 2:
+                    return FuncNode(type=args[0], inner=args[1])
+                if len(args) == 3:
+                    if args[0].name == 'static':
+                        return FuncNode(static=args[0], type=args[1], inner=args[2])
+                    else:
+                        return FuncNode(access=args[0], type=args[1], inner=args[2])
+                if len(args) == 4:
+                    return FuncNode(access=args[0], static=args[1], type=args[2], inner=args[3])
             return get_node
         elif item == 'bool':
             def get_node(*args):
