@@ -156,7 +156,7 @@ class CodeGenerator:
             self.output_file.write("{0}ASTORE".format(self.types_prefixes_dict[node.type.v_type]))
 
     def putfield(self, node):
-        self.output_file.write("PUTFIELD test.{0}: {1}\r\n".format(str(node.name.name), self.field_type(node)))
+        self.output_file.write("PUTFIELD test.{0} : {1}\r\n".format(str(node.name.name), self.field_type(node)))
 
     def field_type(self, node):
         return '[{0}'.format(self.types_prefixes_dict[node.type.v_type]) \

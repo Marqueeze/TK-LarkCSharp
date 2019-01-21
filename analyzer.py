@@ -27,7 +27,8 @@ class Analyzer:
                     return_type = node.type.name
                     node.scope = scope
                     node = node.inner
-                    scope.funcs[str(node.name)] = {'r': return_type, 'p': [str(x.children[0]) for x in node.params.vars_list]}
+                    scope.funcs[str(node.name)] = \
+                        {'r': return_type, 'p': [str(x.children[0]) for x in node.params.vars_list]}
                     scope = Scope(parent=scope, name=str(node.name))
 
                     for param in node.params.vars_list:
@@ -59,6 +60,8 @@ class Analyzer:
     def vars_decl_scope(self, scope: Scope, d_type, s_type, nodes: Tuple[AstNode]):
         for node in nodes:
             if isinstance(node, (IdentNode, ArrayNode, AssignNode)):
+                if isinstance(node, (ArrayNode, AssignNode)):
+                    node.is_reassignment = False
                 if self.check_in_scope(scope, str(node.name), 'vars'):
                     scope.vars[str(node.name)] = (d_type, s_type)
                 else:
@@ -138,7 +141,7 @@ class Analyzer:
         v_type = None
         arg1_node, res1 = self.get_cast(arg1_type, arg2_type, arg1_node)
         arg2_node, res2 = self.get_cast(arg2_type, arg1_type, arg2_node)
-        if res1 == -1 or res2 == -1:
+        if res1 == -1 and res2 == -1:
             raise AnalyzerError(
                 "Can't implicitly cast {0} to {1} or {1} to {0}".format(arg1_type, arg2_type))
         if (res1 == 0 or res2 == 0) or res2 == 1:
@@ -161,14 +164,24 @@ class Analyzer:
         return new_node
 
     def analyze_assign(self, node: AssignNode) -> Tuple[AstNode, BaseType]:
+        if node.scope.name == 'global':
+            if node.is_reassignment:
+                raise AnalyzerError('Cannot reassign global values')
+            if isinstance(node.val, IdentNode) or len(list(self.find_node(node.val, IdentNode))) > 0:
+                raise AnalyzerError('Initializer element is not a compile-time constant')
+
         var_node, v_type = self.analyze_inner(node.name)
         val_node, val_type = self.analyze_inner(node.val)
         val_node, res = self.get_cast(val_type, v_type, val_node)
+
         if res == -1:
             raise AnalyzerError("Can't implicitly cast {0} to {1}".format(val_type, v_type))
+
         return AssignNode(var_node, val_node), v_type
 
     def analyze_conditionals(self, node: Union[WhileNode, DoWhileNode, ForNode, IfNode]) -> AstNode:
+        if node.__class__.__name__ in node.scope.parent.illegal_nodes:
+            raise AnalyzerError('Illegal code in global scope')
         child_list = []
         if isinstance(node, ForNode) and isinstance(node.cond, StmtListNode):
             cond_node, cond_type = StmtListNode(), Bool('bool', False)
@@ -221,7 +234,7 @@ class Analyzer:
                 param_node = self.analyze_vars_decl(param)
                 param_nodes.append(param_node)
 
-        returns = list(self.find_returns(func_node.stmts))
+        returns = list(self.find_node(func_node.stmts, ReturnNode))
         if not (isinstance(r_type, Void) or len(returns) != 0):
             raise AnalyzerError("{0} doesn't return anything".format(func_node.name))
         for return_node in returns:
@@ -256,6 +269,8 @@ class Analyzer:
         return func_node
 
     def analyze_array(self, node: ArrayNode) -> Tuple[AstNode, BaseType]:
+        if node.scope.name == 'global' and node.is_reassignment:
+            raise AnalyzerError('Cannot reassign global values')
         child_nodes = []
         array_type = self.get_type(node.type.name)
         check_type = array_type.__class__(array_type.type, False)
@@ -274,6 +289,8 @@ class Analyzer:
 
     def analyze_index(self, node: IndexNode) -> Tuple[AstNode, BaseType]:
         arr_node, arr_type = self.analyze_inner(node.ident)
+        if not arr_type.isArray:
+            raise AnalyzerError('Indexing non-array object')
         arr_type = copy.deepcopy(arr_type)
         arr_type.isArray = False
         index_node, index_type = self.analyze_inner(node.index)
@@ -283,13 +300,13 @@ class Analyzer:
         new_node = IndexNode(arr_node, index_node, row=node.row, line=node.line)
         return new_node, arr_type
 
-    def find_returns(self, node: AstNode):
+    def find_node(self, node: AstNode, query: type):
         if len(node.children) > 0:
             for child in node.children:
-                if isinstance(child, ReturnNode):
+                if isinstance(child, query):
                     yield child
                     return
-                yield from self.find_returns(child)
+                yield from self.find_node(child, query)
 
     def find_in_scope(self, scope: Scope, query: str, key: str):
         try:

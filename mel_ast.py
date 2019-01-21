@@ -138,6 +138,7 @@ class AssignNode(AstNode):
         super().__init__(row=row, line=line, **props)
         self.name = var
         self.val = val
+        self.is_reassignment = True
 
     @property
     def children(self) -> Tuple[AstNode, AstNode]:
@@ -251,6 +252,7 @@ class ArrayNode(AstNode):
         self.type = arr_type
         self.length = length
         self.contained = contained
+        self.is_reassignment = True
         # self.type.name += '[{0}]'.format(length)
 
     @property

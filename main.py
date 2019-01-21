@@ -1,7 +1,6 @@
 import os
 import mel_parser
 from analyzer import Analyzer
-# from code_generator import CodeGenerator
 from code_generator import CodeGenerator
 
 
@@ -9,8 +8,7 @@ def main():
     prog = '''
         int g = 1 - 2 - 3;
         int t = 4 + 5;
-        double wow2 = g + 5;
-        double wow = g + t;
+        double wow2 = 5.1 + 5;
     '''
     prog = mel_parser.parse(prog)
     # print(*prog.tree, sep=os.linesep)
