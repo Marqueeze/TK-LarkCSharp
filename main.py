@@ -6,8 +6,10 @@ from code_generator import CodeGenerator
 
 def main():
     prog = '''
+        
         int g = 1 - 2 - 3;
-        int t = 0;
+        double t = 4 + 5;
+        
         
         string[] arr = new string[10];
         int[] kek = new int[]{ 1, 2, 3, 4, 5 };

@@ -141,7 +141,7 @@ class Analyzer:
         v_type = None
         arg1_node, res1 = self.get_cast(arg1_type, arg2_type, arg1_node)
         arg2_node, res2 = self.get_cast(arg2_type, arg1_type, arg2_node)
-        if res1 == -1 or res2 == -1:
+        if res1 == -1 and res2 == -1:
             raise AnalyzerError(
                 "Can't implicitly cast {0} to {1} or {1} to {0}".format(arg1_type, arg2_type))
         if (res1 == 0 or res2 == 0) or res2 == 1:
@@ -164,8 +164,11 @@ class Analyzer:
         return new_node
 
     def analyze_assign(self, node: AssignNode) -> Tuple[AstNode, BaseType]:
-        if node.scope.name == 'global' and node.is_reassignment:
-            raise AnalyzerError('Cannot reassign global values')
+        if node.scope.name == 'global':
+            if node.is_reassignment:
+                raise AnalyzerError('Cannot reassign global values')
+            if isinstance(node.val, IdentNode) or len(list(self.find_node(node.val, IdentNode))) > 0:
+                raise AnalyzerError('Initializer element is not a compile-time constant')
 
         var_node, v_type = self.analyze_inner(node.name)
         val_node, val_type = self.analyze_inner(node.val)
@@ -231,7 +234,7 @@ class Analyzer:
                 param_node = self.analyze_vars_decl(param)
                 param_nodes.append(param_node)
 
-        returns = list(self.find_returns(func_node.stmts))
+        returns = list(self.find_node(func_node.stmts, ReturnNode))
         if not (isinstance(r_type, Void) or len(returns) != 0):
             raise AnalyzerError("{0} doesn't return anything".format(func_node.name))
         for return_node in returns:
@@ -286,6 +289,8 @@ class Analyzer:
 
     def analyze_index(self, node: IndexNode) -> Tuple[AstNode, BaseType]:
         arr_node, arr_type = self.analyze_inner(node.ident)
+        if not arr_type.isArray:
+            raise AnalyzerError('Indexing non-array object')
         arr_type = copy.deepcopy(arr_type)
         arr_type.isArray = False
         index_node, index_type = self.analyze_inner(node.index)
@@ -295,13 +300,13 @@ class Analyzer:
         new_node = IndexNode(arr_node, index_node, row=node.row, line=node.line)
         return new_node, arr_type
 
-    def find_returns(self, node: AstNode):
+    def find_node(self, node: AstNode, query: type):
         if len(node.children) > 0:
             for child in node.children:
-                if isinstance(child, ReturnNode):
+                if isinstance(child, query):
                     yield child
                     return
-                yield from self.find_returns(child)
+                yield from self.find_node(child, query)
 
     def find_in_scope(self, scope: Scope, query: str, key: str):
         try:
