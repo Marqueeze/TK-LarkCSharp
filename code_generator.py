@@ -12,19 +12,18 @@ class CodeGenerator:
             'double': 'D',
             'string': 'Ljava/lang/String;'
         }
-        self.params = dict()
+        self.scope = {"0": None}
         self.cur_tree = dict()
 
     def generate(self, prog):
         self.output_file.write("class Test{\r\n")
         self.generate_props(prog)
-        self.output_file.write("\r\n\r\n");
-        self.output_file.write("<init>()V\r\n")
-        self.output_file.write("ALOAD 0\r\n")
-        self.output_file.write("INVOKESPECIAL java/lang/Object.<init> ()V\r\n")
+        self.output_file.write("\r\n\r\n")
         self.generate_init()
+        self.generate_funcs()
 
-        self.output_file.write("}")
+        self.output_file.write("\r\n}")
+        self.output_file.close()
 
     def generate_props(self, tree):
         self.cur_tree[0] = []
@@ -45,8 +44,13 @@ class CodeGenerator:
         self.output_file.write(param_string + "{0} {1}\r\n".format(
                                                                 self.types_prefixes_dict[node.children[0].name[:shift]],
                                                                 node.children[1].name.name))
+        self.scope[node.children[1].name.name] = "test.{0} : {1}".format(node.children[1].name.name,
+                                                                self.types_prefixes_dict[node.children[0].name[:shift]])
 
     def generate_init(self):
+        self.output_file.write("<init>()V\r\n")
+        self.output_file.write("ALOAD 0\r\n")
+        self.output_file.write("INVOKESPECIAL java/lang/Object.<init> ()V\r\n")
         self.cur_tree[1] = []
         for node in self.cur_tree[0]:
             if isinstance(node, AssignNode) or isinstance(node, TypedArrayDeclNode):
@@ -62,8 +66,60 @@ class CodeGenerator:
             self.separate_string_array_from_int_array(node)
             self.fill_array(node)
         else:
-            self.fill_value_and_its_type(node.val.val)
+            if type(node.val) == CastNode:
+                self.generate_cast(node.val)
+            else:
+                self.fill_value_and_its_type(node.val.val)
         self.putfield(node)
+
+    def generate_cast(self, cast):
+        self.push_castable(cast)
+        self.cast_itself(cast)
+
+    def push_castable(self, cast):
+        if type(cast.what) == BinOpNode:
+            self.generate_binop(cast.what)
+        else:
+            raise Exception("CASTING SMTHIN ELSE")
+
+    def generate_binop(self, binop):
+        self.put_value_on_stack(binop.arg1)
+        self.put_value_on_stack(binop.arg2)
+        self.do_op(binop)
+
+    def put_value_on_stack(self, val):
+        if type(val) == ConstNode:
+            self.fill_value_and_its_type(val.val)
+        else:
+            self.get_var_value(val)
+
+    def get_var_value(self, var):
+        self.get_global_var_value(var.name)
+
+    def get_global_var_value(self, name):
+        self.output_file.write("ALOAD 0\r\n")
+        self.output_file.write("GETFIELD "+self.scope[name]+"\r\n")
+
+    def do_op(self, binop):
+        ops_dict = {
+            '+': 'ADD',
+            '-': 'SUB',
+            '*': 'MUL',
+            '/': 'DIV'
+        }
+        self.output_file.write("{0}{1}\r\n".format(self.types_prefixes_dict[binop.arg1.v_type.type],
+                                               ops_dict[binop.op.value]))
+
+    def cast_itself(self, cast):
+        self.output_file.write("{0}2{1}\r\n".format(self.types_prefixes_dict[cast._from.type],
+                                                 self.types_prefixes_dict[cast._to.type]))
+
+
+
+    def generate_funcs(self):
+        self.cur_tree[2] = []
+        for node in self.cur_tree[1]:
+            pass
 
     def fill_value_and_its_type(self, value):
         if type(value) == bool:
