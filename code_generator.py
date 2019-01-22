@@ -1,4 +1,5 @@
 from mel_ast import *
+from scope import Scope
 
 
 class CodeGenerator:
@@ -12,7 +13,7 @@ class CodeGenerator:
             'double': 'D',
             'string': 'Ljava/lang/String;'
         }
-        self.scope = {"0": None}
+        self.scope = Scope(parent=None)
         self.cur_tree = dict()
 
     def generate(self, prog):
@@ -44,7 +45,7 @@ class CodeGenerator:
         self.output_file.write(param_string + "{0} {1}\r\n".format(
                                                                 self.types_prefixes_dict[node.children[0].name[:shift]],
                                                                 node.children[1].name.name))
-        self.scope[node.children[1].name.name] = "test.{0} : {1}".format(node.children[1].name.name,
+        self.scope.vars[node.children[1].name.name] = "test.{0} : {1}".format(node.children[1].name.name,
                                                                 self.types_prefixes_dict[node.children[0].name[:shift]])
 
     def generate_init(self):
@@ -57,7 +58,7 @@ class CodeGenerator:
                 self.initialize_prop(node)
             else:
                 self.cur_tree[1].append(node)
-        self.output_file.write("RETURN")
+        self.output_file.write("RETURN\r\n\r\n")
 
     def initialize_prop(self, node):
         self.output_file.write("ALOAD 0\r\n")
@@ -72,33 +73,43 @@ class CodeGenerator:
                 self.fill_value_and_its_type(node.val.val)
         self.putfield(node)
 
-    def generate_cast(self, cast):
-        self.push_castable(cast)
+    def generate_cast(self, cast, scope):
+        self.push_castable(cast, scope)
         self.cast_itself(cast)
 
-    def push_castable(self, cast):
+    def push_castable(self, cast, scope):
         if type(cast.what) == BinOpNode:
-            self.generate_binop(cast.what)
+            self.generate_binop(cast.what, scope)
+        elif type(cast.what) == TypedNode:
+            self.get_var_value(cast.what, scope)
         else:
             raise Exception("CASTING SMTHIN ELSE")
 
-    def generate_binop(self, binop):
-        self.put_value_on_stack(binop.arg1)
-        self.put_value_on_stack(binop.arg2)
+    def generate_binop(self, binop, scope):
+        self.put_value_on_stack(binop.arg1, scope)
+        self.put_value_on_stack(binop.arg2, scope)
         self.do_op(binop)
 
-    def put_value_on_stack(self, val):
+    def put_value_on_stack(self, val, scope):
         if type(val) == ConstNode:
             self.fill_value_and_its_type(val.val)
+        elif type(val) == CastNode:
+            self.generate_cast(val, scope)
         else:
-            self.get_var_value(val)
+            self.get_var_value(val, scope)
 
-    def get_var_value(self, var):
-        self.get_global_var_value(var.name)
+    def get_var_value(self, var, scope):
+        if scope.parent == None:
+            self.get_global_var_value(var.name)
+        else:
+            self.get_local_var_value(var, scope)
 
     def get_global_var_value(self, name):
         self.output_file.write("ALOAD 0\r\n")
-        self.output_file.write("GETFIELD "+self.scope[name]+"\r\n")
+        self.output_file.write("GETFIELD "+self.scope.vars[name]+"\r\n")
+
+    def get_local_var_value(self, var, scope):
+        self.output_file.write("{0}LOAD {1}\r\n".format(self.types_prefixes_dict[var.v_type.type], scope.vars[var.name]))
 
     def do_op(self, binop):
         ops_dict = {
@@ -119,7 +130,50 @@ class CodeGenerator:
     def generate_funcs(self):
         self.cur_tree[2] = []
         for node in self.cur_tree[1]:
-            pass
+            if type(node) == TypedFuncDeclNode:
+                self.generate_func(node)
+            else:
+                self.cur_tree[2].append(node)
+
+    def generate_func(self, node):
+        self.scope.funcs[node.name.name] = Scope(parent=self.scope, name=node.name.name)
+        self.output_file.write("{0} {1}({2}){3}\r\n".format(node.access.name, node.name.name,
+                                                     ''.join(self.types_prefixes_dict[x.vars_type.name]
+                                                             for x in node.params),
+                                                        self.types_prefixes_dict[node.r_type.type]))
+        self.put_params_in_scope(node.params, self.scope.funcs[node.name.name])
+        for stmt in node.stmts:
+            self.generate_statement(stmt, self.scope.funcs[node.name.name])
+
+    def put_params_in_scope(self, params, scope):
+        for param in params:
+            self.put_param_in_scope(param.children[1].name, scope)
+
+    def put_param_in_scope(self, param_name, scope):
+        scope.var_counter += 1
+        scope.vars[param_name] = scope.var_counter
+
+    def generate_statement(self, node, scope):
+        if type(node) == ReturnNode:
+            self.generate_return(node, scope)
+        elif type(node) == VarsDeclNode:
+            self.generate_vars_decl_node(node, scope)
+        else:
+            raise Exception("GOT ANOTHER STATEMENT (codeGen line 135)")
+
+    def generate_return(self, node, scope):
+        if type(node.expr) == BinOpNode:
+            self.generate_binop(node.expr, scope)
+            self.output_file.write("{0}RETURN\r\n".format(self.types_prefixes_dict[node.expr.arg1.v_type.type]))
+        elif type(node.expr) == TypedNode:
+            r_type = self.types_prefixes_dict[node.expr.v_type.type]
+            self.output_file.write("{0}LOAD {1}\r\n".format(r_type, scope.vars[node.expr.name]))
+            self.output_file.write("{0}RETURN\r\n\r\n".format(r_type))
+        elif type(node.expr) == ConstNode:
+            self.fill_value_and_its_type(node.expr.val)
+            self.output_file.write("{0}RETURN\r\n\r\n".format(node.expr.v_type.type))
+        else:
+            raise Exception("RETURNING SMTHN ELSE (codeGen 164)")
 
     def fill_value_and_its_type(self, value):
         if type(value) == bool:
@@ -144,16 +198,16 @@ class CodeGenerator:
         return number_type
 
     def separate_string_array_from_int_array(self, node):
-        if 'string' in str(node.children[0]).lower():
+        if 'string' in str(node).lower():
             self.output_file.write("ANEWARRAY java/lang/String\r\n")
         else:
-            self.output_file.write("NEWARRAY T_{0}\r\n".format(node.type.v_type)) # node.type.v_type - bbb
+            self.output_file.write("NEWARRAY T_{0}\r\n".format(node.type.v_type))
 
     def fill_array(self, node):
         for i in range(0, len(node.contents)):
             self.output_file.write("DUP\r\n")
             self.output_file.write("{0} {1}\r\n".format(self.number_type(i), node.contents[i].val))
-            self.output_file.write("{0}ASTORE".format(self.types_prefixes_dict[node.type.v_type]))
+            self.output_file.write("{0}ASTORE\r\n".format(self.types_prefixes_dict[node.type.v_type]))
 
     def putfield(self, node):
         self.output_file.write("PUTFIELD test.{0} : {1}\r\n".format(str(node.name.name), self.field_type(node)))
@@ -163,16 +217,17 @@ class CodeGenerator:
             if '[]' in str(node) else \
             self.types_prefixes_dict[node.name.v_type.v_type]
 
-    def generate_vars_decl_node(self, node: VarsDeclNode):
-        name = node.children[0].name
-        self.params[name] = self.locals_counter
-        self.locals_counter += 1
-        if '[]' in name:
-            self.fill_number_and_its_type(node)
-            self.separate_string_array_from_int_array(node)
-            self.output_file.write("ASTORE {0}".format(self.params[name]))
-        else:
-            self.output_file.write("{0}CONST_{1}\r\n".format(self.types_prefixes_dict[str(node.children[0])],
-                                                            str(node.children[1].children[1].val)))
-            self.output_file.write("{0}STORE {1}".format(self.types_prefixes_dict[str(node.children[0])],
-                                                         self.locals_counter))
+    def generate_vars_decl_node(self, node, scope):
+        name = node.children[1].name.name
+        self.put_param_in_scope(name, scope)
+        for child in node.children:
+            if type(child) == AssignNode:
+                self.generate_assign(child, scope)
+            elif type(child) == IdentNode:
+                pass
+            else:
+                raise Exception("codeGen line 205")
+
+    def generate_assign(self, node, scope):
+        if type(node.val) == BinOpNode:
+            self.generate_binop(node.val, scope)

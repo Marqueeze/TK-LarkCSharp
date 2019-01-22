@@ -6,10 +6,11 @@ class Scope:
         self.parent = parent
         self.vars = {}
         self.funcs = {}
+        self.var_counter = 0
 
     @property
     def is_func_allowed(self):
-        return True if self.name == 'global' else False
+        return self.name == 'global'
 
     @property
     def illegal_nodes(self):

@@ -9,6 +9,17 @@ def main():
         int g = 1 - 2 - 3;
         int t = 4 + 5;
         double wow2 = 5.1 + 5;
+        string[] str1 = new string[6];
+        double[] dbl = new double[] { 2.1, 6.7, 14.91 };
+        
+        public int func(int b, int i){
+            double w = 7.1 + b;
+            return b;
+        }
+        
+        private int func2(double db, int i){
+            return 7;
+        }
     '''
     prog = mel_parser.parse(prog)
     # print(*prog.tree, sep=os.linesep)
