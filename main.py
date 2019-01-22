@@ -6,9 +6,13 @@ from code_generator import CodeGenerator
 
 def main():
     prog = '''
-        public string func(string b, string i){
-            string w = "sas" + i + b;
-            return w;
+        public int func(int b, int i){
+            func2(b+2);
+            return b;
+        }
+        
+        public string func2(int i){
+           return "foo";
         }
     '''
     prog = mel_parser.parse(prog)

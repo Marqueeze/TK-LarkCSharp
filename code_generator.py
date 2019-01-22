@@ -11,14 +11,16 @@ class CodeGenerator:
             'bool': 'Z',
             'long': 'L',
             'double': 'D',
-            'string': 'Ljava/lang/String;'
+            'string': 'Ljava/lang/String;',
+            'void': 'V'
         }
         self.types_return_dict = {
             'int': 'I',
             'bool': 'Z',
             'long': 'L',
             'double': 'D',
-            'string': 'A'
+            'string': 'A',
+            'void': 'V'
         }
         self.scope = Scope(parent=None)
         self.cur_tree = dict()
@@ -29,7 +31,6 @@ class CodeGenerator:
         self.output_file.write("\r\n\r\n")
         self.generate_init()
         self.generate_funcs()
-
         self.output_file.write("\r\n}")
         self.output_file.close()
 
@@ -52,8 +53,9 @@ class CodeGenerator:
         self.output_file.write(param_string + "{0} {1}\r\n".format(
                                                                 self.types_prefixes_dict[node.children[0].name[:shift]],
                                                                 node.children[1].name.name))
-        self.scope.vars[node.children[1].name.name] = "test.{0} : {1}".format(node.children[1].name.name,
-                                                                self.types_prefixes_dict[node.children[0].name[:shift]])
+        self.scope.vars[node.children[1].name.name] = "test.{0} : {1}"\
+            .format(node.children[1].name.name,
+                    self.types_prefixes_dict[node.children[0].name[:shift]])
 
     def generate_init(self):
         self.output_file.write("<init>()V\r\n")
@@ -93,19 +95,19 @@ class CodeGenerator:
             raise Exception("CASTING SMTHIN ELSE codeGen 80")
 
     def generate_binop(self, binop, scope):
-        if(type(binop.arg1) == BinOpNode):
-            self.generate_binop(binop.arg1, scope)
-        if(type(binop.arg2) == BinOpNode):
-            self.generate_binop(binop.arg2, scope)
-        if(binop.arg1.v_type.type == "string"):
-            if(binop.op.value == '+'):
-                self.generate_string_op(binop, scope)
+        if type(binop.arg1) == BinOpNode:
+            binop.arg1 = self.generate_binop(binop.arg1, scope)
+        if type(binop.arg2) == BinOpNode:
+            binop.arg2 = self.generate_binop(binop.arg2, scope)
+        if binop.arg1.v_type.type == "string":
+            if binop.op.value == '+':
+                return self.generate_string_op(binop, scope)
             else:
                 raise Exception("String concat allowed only codeGen 95")
         else:
             self.put_value_on_stack(binop.arg1, scope)
             self.put_value_on_stack(binop.arg2, scope)
-            self.do_op(binop)
+            return self.do_op(binop)
 
     def generate_string_op(self, op, scope):
         self.output_file.write("NEW java/lang/StringBuilder\r\n" + "DUP\r\n" +
@@ -117,6 +119,7 @@ class CodeGenerator:
         self.output_file.write("INVOKEVIRTUAL java/lang/StringBuilder.append "
                                + "(Ljava/lang/String;)Ljava/lang/StringBuilder;\r\n"
                                + "INVOKEVIRTUAL java/lang/StringBuilder.toString ()Ljava/lang/String;\r\n")
+        return TypedNode("", op.arg1.v_type, '')
 
     def put_value_on_stack(self, val, scope):
         if type(val) == ConstNode:
@@ -124,12 +127,19 @@ class CodeGenerator:
         elif type(val) == CastNode:
             self.generate_cast(val, scope)
         elif type(val) == TypedNode:
-            self.get_var_value(val, scope)
+            if val.name != "":
+                self.get_var_value(val, scope)
+            else:
+                pass
         else:
             raise Exception("codeGen 121")
 
     def get_var_value(self, var, scope):
-        if scope.parent == None:
+        if type(var) == ConstNode:
+            self.fill_value_and_its_type(var.val)
+        elif type(var) == BinOpNode:
+            self.generate_binop(var, scope)
+        elif scope.parent is None:
             self.get_global_var_value(var.name)
         else:
             self.get_local_var_value(var, scope)
@@ -153,7 +163,8 @@ class CodeGenerator:
             '/': 'DIV'
         }
         self.output_file.write("{0}{1}\r\n".format(self.types_prefixes_dict[binop.arg1.v_type.type],
-                                               ops_dict[binop.op.value]))
+                                                   ops_dict[binop.op.value]))
+        return TypedNode("", binop.arg1.v_type, s_type="")
 
     def cast_itself(self, cast):
         self.output_file.write("{0}2{1}\r\n".format(self.types_prefixes_dict[cast._from.type],
@@ -170,9 +181,9 @@ class CodeGenerator:
     def generate_func(self, node):
         self.scope.funcs[node.name.name] = Scope(parent=self.scope, name=node.name.name)
         self.output_file.write("{0} {1}({2}){3}\r\n".format(node.access.name, node.name.name,
-                                                     ''.join(self.types_prefixes_dict[x.vars_type.name]
-                                                             for x in node.params),
-                                                        self.types_prefixes_dict[node.r_type.type]))
+                                                            ''.join(self.types_prefixes_dict[x.vars_type.name]
+                                                                    for x in node.params),
+                                                            self.types_prefixes_dict[node.r_type.type]))
         self.put_params_in_scope(node.params, self.scope.funcs[node.name.name])
         for stmt in node.stmts:
             self.generate_statement(stmt, self.scope.funcs[node.name.name])
@@ -181,7 +192,8 @@ class CodeGenerator:
         for param in params:
             self.put_param_in_scope(param.children[1].name, scope)
 
-    def put_param_in_scope(self, param_name, scope):
+    @staticmethod
+    def put_param_in_scope(param_name, scope):
         scope.var_counter += 1
         scope.vars[param_name] = scope.var_counter
 
@@ -190,20 +202,35 @@ class CodeGenerator:
             self.generate_return(node, scope)
         elif type(node) == VarsDeclNode:
             self.generate_vars_decl_node(node, scope)
+        elif type(node) == CallNode:
+            self.generate_func_call(node, scope)
+        elif type(node) == AssignNode:
+            self.generate_assign(node, scope)
         else:
-            raise Exception("GOT ANOTHER STATEMENT (codeGen line 188)")
+            raise Exception("GOT ANOTHER STATEMENT (codeGen line 196)")
+
+    def generate_func_call(self, call, scope, assigning=False):
+        self.output_file.write("ALOAD 0\r\n")
+        for param in call.params:
+            self.get_var_value(param, scope)
+        self.output_file.write("INVOKEVIRTUAL test.{0} ({1}){2}\r\n"
+                               .format(call.func.name,
+                                       ''.join(self.types_prefixes_dict[x.type] for x in call.func.param_types),
+                                       self.types_prefixes_dict[call.func.r_type.type]))
+        if not assigning:
+            self.output_file.write("POP\r\n")
 
     def generate_return(self, node, scope):
         if type(node.expr) == BinOpNode:
             self.generate_binop(node.expr, scope)
-            self.output_file.write("{0}RETURN\r\n".format(self.types_prefixes_dict[node.expr.arg1.v_type.type]))
+            self.output_file.write("{0}RETURN\r\n".format(self.types_return_dict[node.expr.arg1.v_type.type]))
         elif type(node.expr) == TypedNode:
             r_type = self.types_return_dict[node.expr.v_type.type]
             self.output_file.write("{0}LOAD {1}\r\n".format(r_type, scope.vars[node.expr.name]))
             self.output_file.write("{0}RETURN\r\n\r\n".format(r_type))
         elif type(node.expr) == ConstNode:
             self.fill_value_and_its_type(node.expr.val)
-            self.output_file.write("{0}RETURN\r\n\r\n".format(node.expr.v_type.type))
+            self.output_file.write("{0}RETURN\r\n\r\n".format(self.types_return_dict[node.expr.v_type.type]))
         else:
             raise Exception("RETURNING SMTHN ELSE (codeGen 197)")
 
@@ -265,7 +292,11 @@ class CodeGenerator:
             self.generate_binop(node.val, scope)
         elif type(node.val) == CastNode:
             self.generate_cast(node.val, scope)
+        elif type(node.val) == CallNode:
+            self.generate_func_call(node.val, scope, True)
+        elif type(node.val) in (ConstNode, TypedNode):
+            self.get_var_value(node.val, scope)
         else:
             raise Exception("ASSIGNING SMTH ELSE codeGen 263")
         self.output_file.write("{0}STORE {1}\r\n".format(self.types_return_dict[node.name.v_type.type],
-                                                     scope.vars[node.name.name]))
+                                                         scope.vars[node.name.name]))
