@@ -13,6 +13,13 @@ class CodeGenerator:
             'double': 'D',
             'string': 'Ljava/lang/String;'
         }
+        self.types_return_dict = {
+            'int': 'I',
+            'bool': 'Z',
+            'long': 'L',
+            'double': 'D',
+            'string': 'A'
+        }
         self.scope = Scope(parent=None)
         self.cur_tree = dict()
 
@@ -77,7 +84,7 @@ class CodeGenerator:
         self.push_castable(cast, scope)
         self.cast_itself(cast)
 
-    def push_castable(self, cast, scope):
+    def push_castable(self, cast: CastNode, scope):
         if type(cast.what) == BinOpNode:
             self.generate_binop(cast.what, scope)
         elif type(cast.what) == TypedNode:
@@ -86,9 +93,30 @@ class CodeGenerator:
             raise Exception("CASTING SMTHIN ELSE codeGen 80")
 
     def generate_binop(self, binop, scope):
-        self.put_value_on_stack(binop.arg1, scope)
-        self.put_value_on_stack(binop.arg2, scope)
-        self.do_op(binop)
+        if(type(binop.arg1) == BinOpNode):
+            self.generate_binop(binop.arg1, scope)
+        if(type(binop.arg2) == BinOpNode):
+            self.generate_binop(binop.arg2, scope)
+        if(binop.arg1.v_type.type == "string"):
+            if(binop.op.value == '+'):
+                self.generate_string_op(binop, scope)
+            else:
+                raise Exception("String concat allowed only codeGen 95")
+        else:
+            self.put_value_on_stack(binop.arg1, scope)
+            self.put_value_on_stack(binop.arg2, scope)
+            self.do_op(binop)
+
+    def generate_string_op(self, op, scope):
+        self.output_file.write("NEW java/lang/StringBuilder\r\n" + "DUP\r\n" +
+                               "INVOKESPECIAL java/lang/StringBuilder.<init> ()V\r\n")
+        self.get_var_value(op.arg1, scope)
+        self.output_file.write("INVOKEVIRTUAL java/lang/StringBuilder.append" +
+                               " (Ljava/lang/String;)Ljava/lang/StringBuilder;\r\n")
+        self.get_var_value(op.arg2, scope)
+        self.output_file.write("INVOKEVIRTUAL java/lang/StringBuilder.append "
+                               + "(Ljava/lang/String;)Ljava/lang/StringBuilder;\r\n"
+                               + "INVOKEVIRTUAL java/lang/StringBuilder.toString ()Ljava/lang/String;\r\n")
 
     def put_value_on_stack(self, val, scope):
         if type(val) == ConstNode:
@@ -98,7 +126,7 @@ class CodeGenerator:
         elif type(val) == TypedNode:
             self.get_var_value(val, scope)
         else:
-            raise Exception("codeGen 93")
+            raise Exception("codeGen 121")
 
     def get_var_value(self, var, scope):
         if scope.parent == None:
@@ -112,7 +140,7 @@ class CodeGenerator:
 
     def get_local_var_value(self, var, scope):
         try:
-            self.output_file.write("{0}LOAD {1}\r\n".format(self.types_prefixes_dict[var.v_type.type],
+            self.output_file.write("{0}LOAD {1}\r\n".format(self.types_return_dict[var.v_type.type],
                                                             scope.vars[var.name]))
         except KeyError:
             self.get_var_value(var, scope.parent)
@@ -129,9 +157,7 @@ class CodeGenerator:
 
     def cast_itself(self, cast):
         self.output_file.write("{0}2{1}\r\n".format(self.types_prefixes_dict[cast._from.type],
-                                                 self.types_prefixes_dict[cast._to.type]))
-
-
+                                                    self.types_prefixes_dict[cast._to.type]))
 
     def generate_funcs(self):
         self.cur_tree[2] = []
@@ -165,21 +191,21 @@ class CodeGenerator:
         elif type(node) == VarsDeclNode:
             self.generate_vars_decl_node(node, scope)
         else:
-            raise Exception("GOT ANOTHER STATEMENT (codeGen line 158)")
+            raise Exception("GOT ANOTHER STATEMENT (codeGen line 188)")
 
     def generate_return(self, node, scope):
         if type(node.expr) == BinOpNode:
             self.generate_binop(node.expr, scope)
             self.output_file.write("{0}RETURN\r\n".format(self.types_prefixes_dict[node.expr.arg1.v_type.type]))
         elif type(node.expr) == TypedNode:
-            r_type = self.types_prefixes_dict[node.expr.v_type.type]
+            r_type = self.types_return_dict[node.expr.v_type.type]
             self.output_file.write("{0}LOAD {1}\r\n".format(r_type, scope.vars[node.expr.name]))
             self.output_file.write("{0}RETURN\r\n\r\n".format(r_type))
         elif type(node.expr) == ConstNode:
             self.fill_value_and_its_type(node.expr.val)
             self.output_file.write("{0}RETURN\r\n\r\n".format(node.expr.v_type.type))
         else:
-            raise Exception("RETURNING SMTHN ELSE (codeGen 166)")
+            raise Exception("RETURNING SMTHN ELSE (codeGen 197)")
 
     def fill_value_and_its_type(self, value):
         if type(value) == bool:
@@ -232,7 +258,7 @@ class CodeGenerator:
             elif type(child) == IdentNode:
                 pass
             else:
-                raise Exception("codeGen line 222")
+                raise Exception("codeGen line 252")
 
     def generate_assign(self, node, scope):
         if type(node.val) == BinOpNode:
@@ -240,4 +266,6 @@ class CodeGenerator:
         elif type(node.val) == CastNode:
             self.generate_cast(node.val, scope)
         else:
-            raise Exception("ASSIGNING SMTH ELSE codeGen 233")
+            raise Exception("ASSIGNING SMTH ELSE codeGen 263")
+        self.output_file.write("{0}STORE {1}\r\n".format(self.types_return_dict[node.name.v_type.type],
+                                                     scope.vars[node.name.name]))
