@@ -13,7 +13,7 @@ def main():
         double[] dbl = new double[] { 2.1, 6.7, 14.91 };
         
         public int func(int b, int i){
-            double w = 7.1 + b;
+            double w = g + b;
             return b;
         }
         

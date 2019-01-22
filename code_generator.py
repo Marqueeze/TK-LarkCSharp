@@ -68,7 +68,7 @@ class CodeGenerator:
             self.fill_array(node)
         else:
             if type(node.val) == CastNode:
-                self.generate_cast(node.val)
+                self.generate_cast(node.val, self.scope)
             else:
                 self.fill_value_and_its_type(node.val.val)
         self.putfield(node)
@@ -83,7 +83,7 @@ class CodeGenerator:
         elif type(cast.what) == TypedNode:
             self.get_var_value(cast.what, scope)
         else:
-            raise Exception("CASTING SMTHIN ELSE")
+            raise Exception("CASTING SMTHIN ELSE codeGen 80")
 
     def generate_binop(self, binop, scope):
         self.put_value_on_stack(binop.arg1, scope)
@@ -95,8 +95,10 @@ class CodeGenerator:
             self.fill_value_and_its_type(val.val)
         elif type(val) == CastNode:
             self.generate_cast(val, scope)
-        else:
+        elif type(val) == TypedNode:
             self.get_var_value(val, scope)
+        else:
+            raise Exception("codeGen 93")
 
     def get_var_value(self, var, scope):
         if scope.parent == None:
@@ -109,7 +111,11 @@ class CodeGenerator:
         self.output_file.write("GETFIELD "+self.scope.vars[name]+"\r\n")
 
     def get_local_var_value(self, var, scope):
-        self.output_file.write("{0}LOAD {1}\r\n".format(self.types_prefixes_dict[var.v_type.type], scope.vars[var.name]))
+        try:
+            self.output_file.write("{0}LOAD {1}\r\n".format(self.types_prefixes_dict[var.v_type.type],
+                                                            scope.vars[var.name]))
+        except KeyError:
+            self.get_var_value(var, scope.parent)
 
     def do_op(self, binop):
         ops_dict = {
@@ -159,7 +165,7 @@ class CodeGenerator:
         elif type(node) == VarsDeclNode:
             self.generate_vars_decl_node(node, scope)
         else:
-            raise Exception("GOT ANOTHER STATEMENT (codeGen line 135)")
+            raise Exception("GOT ANOTHER STATEMENT (codeGen line 158)")
 
     def generate_return(self, node, scope):
         if type(node.expr) == BinOpNode:
@@ -173,7 +179,7 @@ class CodeGenerator:
             self.fill_value_and_its_type(node.expr.val)
             self.output_file.write("{0}RETURN\r\n\r\n".format(node.expr.v_type.type))
         else:
-            raise Exception("RETURNING SMTHN ELSE (codeGen 164)")
+            raise Exception("RETURNING SMTHN ELSE (codeGen 166)")
 
     def fill_value_and_its_type(self, value):
         if type(value) == bool:
@@ -226,8 +232,12 @@ class CodeGenerator:
             elif type(child) == IdentNode:
                 pass
             else:
-                raise Exception("codeGen line 205")
+                raise Exception("codeGen line 222")
 
     def generate_assign(self, node, scope):
         if type(node.val) == BinOpNode:
             self.generate_binop(node.val, scope)
+        elif type(node.val) == CastNode:
+            self.generate_cast(node.val, scope)
+        else:
+            raise Exception("ASSIGNING SMTH ELSE codeGen 233")
