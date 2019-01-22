@@ -5,7 +5,7 @@ from scope import Scope
 class CodeGenerator:
     def __init__(self):
         self.output_file = open('output.txt', 'w')
-        self.locals_counter = 1
+        self.current_l = {}
         self.types_prefixes_dict = {
             'int': 'I',
             'bool': 'Z',
@@ -57,13 +57,24 @@ class CodeGenerator:
             .format(node.children[1].name.name,
                     self.types_prefixes_dict[node.children[0].name[:shift]])
 
+    def generate_new_l(self, func):
+        func_name = func.name.name
+        try:
+            self.current_l[func_name] += 1
+        except KeyError:
+            self.current_l[func_name] = 0
+        return self.current_l[func_name]
+
     def generate_init(self):
         self.output_file.write("<init>()V\r\n")
+        self.output_file.write("L{0}\r\n".format(self.generate_new_l(FuncDeclNode(IdentNode("0"), ""))))
         self.output_file.write("ALOAD 0\r\n")
         self.output_file.write("INVOKESPECIAL java/lang/Object.<init> ()V\r\n")
         self.cur_tree[1] = []
         for node in self.cur_tree[0]:
             if isinstance(node, AssignNode) or isinstance(node, TypedArrayDeclNode):
+                self.output_file.write("L{0}\r\n".format(self.generate_new_l(FuncNode("", "", "",
+                                                                             inner=FuncDeclNode("", "", name='0')))))
                 self.initialize_prop(node)
             else:
                 self.cur_tree[1].append(node)
@@ -186,15 +197,16 @@ class CodeGenerator:
                                                             self.types_prefixes_dict[node.r_type.type]))
         self.put_params_in_scope(node.params, self.scope.funcs[node.name.name])
         for stmt in node.stmts:
+            self.output_file.write("L{0}\r\n".format(self.generate_new_l(node)))
             self.generate_statement(stmt, self.scope.funcs[node.name.name])
 
     def put_params_in_scope(self, params, scope):
         for param in params:
-            self.put_param_in_scope(param.children[1].name, scope)
+            self.put_param_in_scope(param.children[1].name, param.vars_type.token, scope)
 
     @staticmethod
-    def put_param_in_scope(param_name, scope):
-        scope.var_counter += 1
+    def put_param_in_scope(param_name, param_type, scope):
+        scope.var_counter += 1 if param_type != 'double' else 2
         scope.vars[param_name] = scope.var_counter
 
     def generate_statement(self, node, scope):
