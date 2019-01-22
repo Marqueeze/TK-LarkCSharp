@@ -206,6 +206,10 @@ class Analyzer:
         func_name = node.func.name
         func_signature = self.find_in_scope(node.scope, func_name, 'funcs')
         r_type = self.get_type(func_signature['r'])
+        if len(node.params) != len(func_signature['p']):
+            raise AnalyzerError('{0} accepts {1} argument(s), {2} was given instead'.format(func_name,
+                                                                                            len(func_signature['p']),
+                                                                                            len(node.params)))
         for index, param in enumerate(node.params):
             param_node, param_type = self.analyze_inner(param)
             p_type = self.get_type(func_signature['p'][index])
@@ -229,7 +233,7 @@ class Analyzer:
         func_node = node.inner
         for param in func_node.params.vars_list:
             if isinstance(param, VarsDeclNode):
-                if len(param.vars_list) != 1:
+                if len(param.vars_list) != 1 or not isinstance(param.vars_list[0], IdentNode):
                     raise AnalyzerError("Wrong parameter syntax")
                 param_node = self.analyze_vars_decl(param)
                 param_nodes.append(param_node)

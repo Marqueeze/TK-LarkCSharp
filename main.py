@@ -17,20 +17,25 @@ def main():
         void pppppppp(int abc, char[] thhhh) { }
         
         
-        public int[] what(int a, int b) 
+        public int what(int a, int b) 
         {
+            for (int i = 0; i < 10; i = i + 1){
+                b = b + 1;
+            }
             int gh = 100 * a - b / 23;
+            char abc = 'a';
+            if (a > b) {
+                return 0;
+            }
             int[] c = new int[]{5, 4, 6, 5, 1};
             string fff = "asd";
-            return c;
+            return c[0];
         }
         
         
         public static void whatElse(int a, int b) 
         {
-            int[] c = what(a, b);
-            c[a + b] = 0;
-            int e = c[3];
+            int c = 10 + 15 - what(a, a);
             while (true)
             {
                 a = a + b;
@@ -53,7 +58,7 @@ def main():
     #     a.analyze(prog)
     # except ValueError as e:
     #     print(e)
-    print(*the_prog.tree, sep=os.linesep)
+    # print(*the_prog.tree, sep=os.linesep)
     # print(gen.generate()[0])
     # print(gen.constants)
 

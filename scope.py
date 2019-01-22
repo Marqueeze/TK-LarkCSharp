@@ -9,7 +9,7 @@ class Scope:
 
     @property
     def is_func_allowed(self):
-        return True if self.name == 'global' else False
+        return self.name == 'global'
 
     @property
     def illegal_nodes(self):
