@@ -438,5 +438,11 @@ class TypedArrayDeclNode(AstNode):
     def __str__(self):
         return '{0} ({1})'.format(self.name, self.type)
 
+class InputNode:
+    pass
+
+class OutputNode:
+    pass
+
 
 _empty = StmtListNode()

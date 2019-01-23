@@ -51,9 +51,9 @@ class CodeGenerator:
             param_string = "["
             shift = -2
         self.output_file.write(param_string + "{0} {1}\r\n".format(
-                                                                self.types_prefixes_dict[node.children[0].name[:shift]],
-                                                                node.children[1].name.name))
-        self.scope.vars[node.children[1].name.name] = "test.{0} : {1}"\
+            self.types_prefixes_dict[node.children[0].name[:shift]],
+            node.children[1].name.name))
+        self.scope.vars[node.children[1].name.name] = "test.{0} : {1}" \
             .format(node.children[1].name.name,
                     self.types_prefixes_dict[node.children[0].name[:shift]])
 
@@ -158,7 +158,7 @@ class CodeGenerator:
 
     def get_global_var_value(self, name):
         self.output_file.write("ALOAD 0\r\n")
-        self.output_file.write("GETFIELD "+self.scope.vars[name]+"\r\n")
+        self.output_file.write("GETFIELD " + self.scope.vars[name] + "\r\n")
 
     def get_local_var_value(self, var, scope):
         try:
@@ -226,7 +226,12 @@ class CodeGenerator:
             self.generate_vars_decl_node(node, scope)
             return None
         elif type(node) == CallNode:
-            self.generate_func_call(node, scope)
+            if node.func.name.lower() == 'readline':
+                self.generate_input()
+            elif node.func.name.lower() == 'writeline':
+                self.generate_output(node.params[0], scope)
+            else:
+                self.generate_func_call(node, scope)
             return None
         elif type(node) == AssignNode:
             self.generate_assign(node, scope)
@@ -254,7 +259,7 @@ class CodeGenerator:
                                .format(call.func.name,
                                        ''.join(self.types_prefixes_dict[x.type] for x in call.func.param_types),
                                        self.types_prefixes_dict[call.func.r_type.type]))
-        if not assigning:
+        if not assigning and call.func.r_type.type != 'void':
             self.output_file.write("POP\r\n")
 
     def generate_return(self, node, scope):
@@ -332,9 +337,18 @@ class CodeGenerator:
         elif type(node.val) == CastNode:
             self.generate_cast(node.val, scope)
         elif type(node.val) == CallNode:
-            self.generate_func_call(node.val, scope, True)
+            if node.val.func.name.lower() == 'readline':
+                self.generate_input()
+            elif node.val.func.name.lower() == 'writeline':
+                self.generate_output()
+            else:
+                self.generate_func_call(node.val, scope, True)
         elif type(node.val) in (ConstNode, TypedNode):
             self.get_var_value(node.val, scope)
+        elif type(node.val) == InputNode:
+            self.generate_input()
+        elif type(node.val) == OutputNode:
+            self.generate_output(node.val, scope)
         else:
             raise Exception("ASSIGNING SMTH ELSE codeGen 263")
         self.output_file.write("{0}STORE {1}\r\n".format(self.types_return_dict[node.name.v_type.type],
@@ -384,13 +398,13 @@ class CodeGenerator:
             '!=': 'NE',
         }
         if type == 'string':
-            if cond in('==', '!='):
+            if cond in ('==', '!='):
                 outp = "IF_ACMP{0} L{1}\r\n"
             else:
                 raise Exception("Wrong string comparing (codeGen 322)")
-            self.output_file.write(outp.format(eval("cond_"+cond_type+"_dict[cond]"), L))
+            self.output_file.write(outp.format(eval("cond_" + cond_type + "_dict[cond]"), L))
         elif type in ('int', 'bool'):
-            self.output_file.write("IF_ICMP{0} L{1}\r\n".format(eval("cond_"+cond_type+"_dict[cond]"), L))
+            self.output_file.write("IF_ICMP{0} L{1}\r\n".format(eval("cond_" + cond_type + "_dict[cond]"), L))
         elif type in ('double', 'long'):
             if type == 'double':
                 if cond in ('==', '!=', '>=', '>'):
@@ -399,7 +413,7 @@ class CodeGenerator:
                     self.output_file.write("DCMPG\r\n")
             else:
                 self.output_file.write("LCMP\r\n")
-            self.output_file.write("IF{0} L{1}\r\n".format(eval("cond_"+cond_type+"_dict[cond]"), L))
+            self.output_file.write("IF{0} L{1}\r\n".format(eval("cond_" + cond_type + "_dict[cond]"), L))
         return L
 
     def generate_while(self, node, scope, cond_l):
@@ -410,10 +424,10 @@ class CodeGenerator:
         return outloop
 
     def generate_while_body(self, stmt, scope, cond_l):
-        self.generate_else(stmt, scope,  cond_l)
+        self.generate_else(stmt, scope, cond_l)
         self.output_file.write("GOTO L{0}\r\n".format(cond_l))
 
-    def generate_dowhile(self, node, scope, cond_l):   #Body - условие, Cond - действия
+    def generate_dowhile(self, node, scope, cond_l):  # Body - условие, Cond - действия
         self.generate_dowhile_body(node.cond, scope)
         self.output_file.write("L{0}\r\n".format(self.generate_new_l(scope)))
         self.get_var_value(node.body.arg1, scope)
@@ -441,7 +455,6 @@ class CodeGenerator:
         self.get_var_value(node.arg2, scope)
         return L, self.generate_cond(node.op.value, node.arg1.v_type.type, scope, "reverse")
 
-
     def generate_for_body(self, body, scope):
         for ch in body.ch:
             self.generate_statement(ch, scope)
@@ -450,3 +463,19 @@ class CodeGenerator:
         for ch in node.ch:
             self.generate_statement(ch, scope)
         self.output_file.write("GOTO L{0}\r\n".format(req_l))
+
+    def generate_input(self):
+        self.output_file.write('NEW java/io/BufferedReader\r\n'
+                                + 'DUP\r\n'
+                                + 'NEW java/io/InputStreamReader\r\n'
+                                + 'DUP\r\n'
+                                + 'GETSTATIC java/lang/System.in : Ljava/io/InputStream;\r\n'
+                                + 'INVOKESPECIAL java/io/InputStreamReader.<init> (Ljava/io/InputStream;)V\r\n'
+                                + 'INVOKESPECIAL java/io/BufferedReader.<init> (Ljava/io/Reader;)V\r\n'
+                                + 'INVOKEVIRTUAL java/io/BufferedReader.readLine ()Ljava/lang/String;\r\n')
+
+    def generate_output(self, what, scope):
+        self.output_file.write('GETSTATIC java/lang/System.out : Ljava/io/PrintStream;\r\n'
+                               + '{0}\r\n'.format(self.get_var_value(what, scope))
+                               + 'INVOKEVIRTUAL java/io/PrintStream.println (Ljava/lang/String;)V\r\n'
+                               )
