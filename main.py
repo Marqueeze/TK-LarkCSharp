@@ -6,16 +6,10 @@ from code_generator import CodeGenerator
 
 def main():
     prog = '''
-       public int func(int i, int j){
-            if(i>j)
-            {
-                int s = i + 12;
-                return s;
-            }
-            else
-            {
-                return i;
-            }
+       public void func(int i, int j){
+            while(i<j){
+           i = i + 1;
+       }
     }
     '''
     prog = mel_parser.parse(prog)

@@ -198,8 +198,12 @@ class CodeGenerator:
                                                             self.types_prefixes_dict[node.r_type.type]))
         self.put_params_in_scope(node.params, self.scope.funcs[node.name.name])
         L = None
+        returns = False
         for stmt in node.stmts:
+            returns |= type(stmt) == ReturnNode
             L = self.generate_statement(stmt, self.scope.funcs[node.name.name], L)
+        if not returns and node.r_type.type == "void":
+            self.generate_statement(ReturnNode(), self.scope.funcs[node.name.name], L)
 
     def put_params_in_scope(self, params, scope):
         for param in params:
@@ -212,7 +216,8 @@ class CodeGenerator:
 
     def generate_statement(self, node, scope, L=None):
         if type(node) != AbstractNode:
-            self.output_file.write("L{0}\r\n".format(self.generate_new_l(scope, L)))
+            cond_l = self.generate_new_l(scope, L)
+            self.output_file.write("L{0}\r\n".format(cond_l))
         if type(node) == ReturnNode:
             self.generate_return(node, scope)
             return None
@@ -227,6 +232,8 @@ class CodeGenerator:
             return None
         elif type(node) == IfNode:
             return self.generate_if(node, scope)
+        elif type(node) == WhileNode:
+            return self.generate_while(node, scope, cond_l)
         elif type(node) == AbstractNode:
             for child in node.ch:
                 self.generate_statement(child, scope)
@@ -256,6 +263,8 @@ class CodeGenerator:
         elif type(node.expr) == ConstNode:
             self.fill_value_and_its_type(node.expr.val)
             self.output_file.write("{0}RETURN\r\n\r\n".format(self.types_return_dict[node.expr.v_type.type]))
+        elif type(node.expr) == StmtListNode:
+            self.output_file.write("RETURN\r\n\r\n")
         else:
             raise Exception("RETURNING SMTHN ELSE (codeGen 197)")
 
@@ -339,7 +348,7 @@ class CodeGenerator:
             after_else_L = else_L
         return after_else_L
 
-    def generate_else(self, stmt, scope, L):
+    def generate_else(self, stmt, scope, L=None):
         for i in range(len(stmt.ch)):
             self.generate_statement(stmt.ch[i], scope, L if i == 0 else None)
 
@@ -379,6 +388,17 @@ class CodeGenerator:
                 self.output_file.write("LCMP\r\n")
             self.output_file.write("IF{0} L{1}\r\n".format(cond_dict[cond], L))
         return L
+
+    def generate_while(self, node, scope, cond_l):
+        self.get_var_value(node.cond.arg1, scope)
+        self.get_var_value(node.cond.arg2, scope)
+        outloop = self.generate_cond(node.cond.op.value, node.cond.arg1.v_type.type, scope)
+        self.generate_while_body(node.body, scope, cond_l)
+        return outloop
+
+    def generate_while_body(self, stmt, scope, cond_l):
+        self.generate_else(stmt, scope)
+        self.output_file.write("GOTO L{0}\r\n".format(cond_l))
 
 
 
