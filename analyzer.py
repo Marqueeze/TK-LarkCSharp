@@ -74,8 +74,11 @@ class Analyzer:
         return self.analyze_inner(tree)
 
     def analyze_inner(self, node: AstNode) -> Union[Tuple[AstNode, BaseType], Tuple[AstNode, None]]:
-        if isinstance(node, ReturnNode) and node.scope.name == 'global':
-            raise AnalyzerError('Nothing to return without a function')
+        if isinstance(node, ReturnNode):
+            if node.scope.name == 'global':
+                raise AnalyzerError('Nothing to return without a function')
+            new_node, v_type = self.analyze_inner(node.expr)
+            return ReturnNode(new_node), v_type
         if len(node.children) > 0:
             if isinstance(node, BinOpNode):
                 return self.analyze_bin_op(node)
@@ -253,20 +256,8 @@ class Analyzer:
                                                                                         r_type, return_type))
 
         for stmt in func_node.stmts.children:
-            if isinstance(stmt, ReturnNode):
-                return_node, return_type = self.analyze_inner(stmt.expr)
-                if not return_type:
-                    return_type = Void('void')
-                return_node, res = self.get_cast(return_type, r_type, return_node)
-                if res == -1:
-                    raise AnalyzerError("{0} should return {1}, returns {2} instead".format(func_node.name,
-                                                                                            r_type, return_type))
-                return_node = ReturnNode(return_node, row=node.row, line=node.line)
-                stmt_nodes.append(return_node)
-                break
-            else:
-                stmt_node, _ = self.analyze_inner(stmt)
-                stmt_nodes.append(stmt_node)
+            stmt_node, _ = self.analyze_inner(stmt)
+            stmt_nodes.append(stmt_node)
 
         func_node = TypedFuncDeclNode(func_node.name, node.access, r_type, stmt_nodes, param_nodes,
                                       row=node.row, line=node.line)
