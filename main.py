@@ -6,10 +6,10 @@ from code_generator import CodeGenerator
 
 def main():
     prog = '''
-       public void func(int i, int j){
-            while(i<j){
+        public void func(int i, int j){
+       do {
            i = i + 1;
-       }
+       }while(i<j);
     }
     '''
     prog = mel_parser.parse(prog)

@@ -216,8 +216,9 @@ class CodeGenerator:
 
     def generate_statement(self, node, scope, L=None):
         if type(node) != AbstractNode:
-            cond_l = self.generate_new_l(scope, L)
-            self.output_file.write("L{0}\r\n".format(cond_l))
+            if L != -1:
+                cond_l = self.generate_new_l(scope, L)
+                self.output_file.write("L{0}\r\n".format(cond_l))
         if type(node) == ReturnNode:
             self.generate_return(node, scope)
             return None
@@ -234,6 +235,8 @@ class CodeGenerator:
             return self.generate_if(node, scope)
         elif type(node) == WhileNode:
             return self.generate_while(node, scope, cond_l)
+        elif type(node) == DoWhileNode:
+            self.generate_dowhile(node, scope, cond_l)
         elif type(node) == AbstractNode:
             for child in node.ch:
                 self.generate_statement(child, scope)
@@ -339,7 +342,7 @@ class CodeGenerator:
         # self.output_file.write("L{0}\r\n".format(self.generate_new_l(scope)))
         self.get_var_value(node.cond.arg1, scope)
         self.get_var_value(node.cond.arg2, scope)
-        else_L = self.generate_cond(node.cond.op.value, node.cond.arg1.v_type.type, scope)
+        else_L = self.generate_cond(node.cond.op.value, node.cond.arg1.v_type.type, scope, "reverse")
         got_else = node.else_stmt is not None
         after_else_L = self.generate_then(node.then_stmt, scope, got_else)
         if got_else:
@@ -360,9 +363,9 @@ class CodeGenerator:
             self.output_file.write("GOTO L{0}\r\n".format(L))
         return L
 
-    def generate_cond(self, cond, type, scope):
-        L = self.generate_new_l(scope)
-        cond_dict = {
+    def generate_cond(self, cond, type, scope, cond_type, req_l=None):
+        L = self.generate_new_l(scope) if req_l is None else req_l
+        cond_reverse_dict = {
             '<': 'GE',
             '>': 'LE',
             '<=': 'GT',
@@ -370,14 +373,22 @@ class CodeGenerator:
             '==': 'NE',
             '!=': 'EQ',
         }
+        cond_straight_dict = {
+            '<': 'LT',
+            '>': 'GT',
+            '<=': 'LE',
+            '>=': 'GE',
+            '==': 'EQ',
+            '!=': 'NE',
+        }
         if type == 'string':
             if cond in('==', '!='):
                 outp = "IF_ACMP{0} L{1}\r\n"
             else:
                 raise Exception("Wrong string comparing (codeGen 322)")
-            self.output_file.write(outp.format(cond_dict[cond], L))
+            self.output_file.write(outp.format(eval("cond_"+cond_type+"_dict[cond]"), L))
         elif type in ('int', 'bool'):
-            self.output_file.write("IF_ICMP{0} L{1}\r\n".format(cond_dict[cond], L))
+            self.output_file.write("IF_ICMP{0} L{1}\r\n".format(eval("cond_"+cond_type+"_dict[cond]"), L))
         elif type in ('double', 'long'):
             if type == 'double':
                 if cond in ('==', '!=', '>=', '>'):
@@ -386,21 +397,26 @@ class CodeGenerator:
                     self.output_file.write("DCMPG\r\n")
             else:
                 self.output_file.write("LCMP\r\n")
-            self.output_file.write("IF{0} L{1}\r\n".format(cond_dict[cond], L))
+            self.output_file.write("IF{0} L{1}\r\n".format(eval("cond_"+cond_type+"_dict[cond]"), L))
         return L
 
     def generate_while(self, node, scope, cond_l):
         self.get_var_value(node.cond.arg1, scope)
         self.get_var_value(node.cond.arg2, scope)
-        outloop = self.generate_cond(node.cond.op.value, node.cond.arg1.v_type.type, scope)
+        outloop = self.generate_cond(node.cond.op.value, node.cond.arg1.v_type.type, scope, "reverse")
         self.generate_while_body(node.body, scope, cond_l)
         return outloop
 
     def generate_while_body(self, stmt, scope, cond_l):
-        self.generate_else(stmt, scope)
+        self.generate_else(stmt, scope,  cond_l)
         self.output_file.write("GOTO L{0}\r\n".format(cond_l))
 
+    def generate_dowhile(self, node, scope, cond_l):   #Body - условие, Cond - действия
+        self.generate_dowhile_body(node.cond, scope)
+        self.output_file.write("L{0}\r\n".format(self.generate_new_l(scope)))
+        self.get_var_value(node.body.arg1, scope)
+        self.get_var_value(node.body.arg2, scope)
+        self.generate_cond(node.body.op.value, node.body.arg1.v_type.type, scope, "straight", cond_l)
 
-
-
-
+    def generate_dowhile_body(self, cond, scope):
+        self.generate_else(cond, scope, -1)
