@@ -7,9 +7,9 @@ from code_generator import CodeGenerator
 def main():
     prog = '''
         public void func(int i, int j){
-       do {
-           i = i + 1;
-       }while(i<j);
+       for(i=0; i<j; i= i + 1){
+           j=j+1;
+       }
     }
     '''
     prog = mel_parser.parse(prog)

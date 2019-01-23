@@ -237,6 +237,8 @@ class CodeGenerator:
             return self.generate_while(node, scope, cond_l)
         elif type(node) == DoWhileNode:
             self.generate_dowhile(node, scope, cond_l)
+        elif type(node) == ForNode:
+            return self.generate_for(node, scope)
         elif type(node) == AbstractNode:
             for child in node.ch:
                 self.generate_statement(child, scope)
@@ -420,3 +422,31 @@ class CodeGenerator:
 
     def generate_dowhile_body(self, cond, scope):
         self.generate_else(cond, scope, -1)
+
+    def generate_for(self, node, scope):
+        self.generate_for_init(node.init, scope)
+        req_l = self.generate_for_cond(node.cond, scope)
+        self.generate_for_body(node.body, scope)
+        self.generate_for_step(node.step, scope, req_l[0])
+        return req_l[1]
+
+    def generate_for_init(self, node, scope):
+        for ch in node.ch:
+            self.generate_statement(ch, scope, -1)
+
+    def generate_for_cond(self, node, scope):
+        L = self.generate_new_l(scope)
+        self.output_file.write("L{0}\r\n".format(L))
+        self.get_var_value(node.arg1, scope)
+        self.get_var_value(node.arg2, scope)
+        return L, self.generate_cond(node.op.value, node.arg1.v_type.type, scope, "reverse")
+
+
+    def generate_for_body(self, body, scope):
+        for ch in body.ch:
+            self.generate_statement(ch, scope)
+
+    def generate_for_step(self, node, scope, req_l):
+        for ch in node.ch:
+            self.generate_statement(ch, scope)
+        self.output_file.write("GOTO L{0}\r\n".format(req_l))
