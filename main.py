@@ -6,14 +6,17 @@ from code_generator import CodeGenerator
 
 def main():
     prog = '''
-        public int func(int b, int i){
-            func2(b+2);
-            return b;
-        }
-        
-        public string func2(int i){
-           return "foo";
-        }
+       public int func(int i, int j){
+            if(i>j)
+            {
+                int s = i + 12;
+                return s;
+            }
+            else
+            {
+                return i;
+            }
+    }
     '''
     prog = mel_parser.parse(prog)
     # print(*prog.tree, sep=os.linesep)
