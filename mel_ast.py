@@ -345,15 +345,15 @@ class CastNode(AstNode):
                  row: Optional[int] = None, line: Optional[int] = None, **props):
         super().__init__(row=row, line=line, **props)
         self.what = what
-        self._from = _from
-        self._to = _to
+        self.from_ = _from
+        self.to_ = _to
 
     @property
     def children(self):
         return self.what,
 
     def __str__(self):
-        return 'cast ({0} -> {1})'.format(self._from, self._to)
+        return 'cast ({0} -> {1})'.format(self.from_, self.to_)
 
 
 class AbstractNode(AstNode):

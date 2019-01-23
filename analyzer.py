@@ -205,7 +205,7 @@ class Analyzer:
         param_types = []
         func_name = node.func.name
         func_signature = self.find_in_scope(node.scope, func_name, 'funcs')
-        r_type = self.get_type(func_signature['r'])
+        r_type = self.get_type(func_signature['r']) if func_signature['r'] != 'void' else Void('void')
         if len(node.params) != len(func_signature['p']):
             raise AnalyzerError('{0} accepts {1} argument(s), {2} was given instead'.format(func_name,
                                                                                             len(func_signature['p']),

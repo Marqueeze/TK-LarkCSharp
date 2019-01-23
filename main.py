@@ -10,15 +10,20 @@ def main():
         int g = 1 - 2 - 3;
         double t = 4 + 5;
         
-        
         string[] arr = new string[10];
         int[] kek = new int[]{ 1, 2, 3, 4, 5 };
         
-        void pppppppp(int abc, char[] thhhh) { }
+        void pppppppp(int abc, char[] thhhh) { 
+            double ec = abc;
+            bool[] tt = new bool[] { true, false, false, false}; 
+            int[] abbbb = new int[] {1 + 2, 2, 3, 4 - abc};
+            int eee = abbbb[0];
+        }
         
         
         public int what(int a, int b) 
         {
+            whatElse(a, b);
             for (int i = 0; i < 10; i = i + 1){
                 b = b + 1;
             }
