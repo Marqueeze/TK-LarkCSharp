@@ -106,7 +106,7 @@ class CodeGenerator:
                         self.generate_inner(var, current)
             else:
                 v_type = self.llvm_non_array_types[v_type[:-2]][0]
-                llvm_type = ['[{0} x {1}]', '16' if v_type != 'i8' else '1']
+                llvm_type = ['[{0} x {1}]', '16' if v_type not in ('i8', 'i1') else '1']
                 for var in node.vars_list:
                     llvm_type[0] = llvm_type[0].format(var.length.val, v_type)
                     current.add_alloc((*llvm_type, var.name.name))
@@ -135,6 +135,7 @@ class CodeGenerator:
                 self.generate_inner(node.else_stmt, current)
 
             current.add_operation(('end_if', ))
+
         elif isinstance(node, ForNode):
             current.add_operation(('for', ))
             self.generate_inner(node.init, current)
@@ -149,6 +150,7 @@ class CodeGenerator:
             self.generate_inner(node.body, current)
 
             current.add_operation(('end_for',))
+
         elif isinstance(node, WhileNode):
             current.add_operation(('while', ))
             self.generate_inner(node.cond, current)
@@ -196,6 +198,7 @@ class CodeGenerator:
             self.generate_inner(stmt, func_code)
 
         func_code.get_blocks()
+        func_code.generate()
         self.func_code_list.append(func_code)
 
     def generate_call(self, node: CallNode, current: FunctionCode = None):

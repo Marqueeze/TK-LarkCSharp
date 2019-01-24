@@ -13,7 +13,21 @@ def main():
         string[] arr = new string[10];
         int[] kek = new int[]{ 1, 2, 3, 4, 5 };
         
+        public int more(int i, int j)
+        {
+            if (i > j) {
+                return i;
+            }
+            else {
+                j = i - g;
+            }
+            return j;
+        }
+        
         void pppppppp(int abc, char[] thhhh) { 
+            while (10 < abc) {
+                abc = abc + 1;
+            }
             double ec = abc;
             bool[] tt = new bool[] { true, false, false, false}; 
             int[] abbbb = new int[] {1 + 2, 2, 3, 4 - abc};
