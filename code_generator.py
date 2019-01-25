@@ -1,3 +1,4 @@
+from exception import AnalyzerError
 from mel_ast import *
 from FunctionCode import FunctionCode
 
@@ -6,11 +7,9 @@ class CodeGenerator:
     def __init__(self, tree: AstNode, output: str):
         self.tree = tree
         self.out = output
-        self.llvm_code = ''
         self.constants = ''
+        self.const_dict = {}
         self.const_count = 0
-        self.array_count = 0
-        self.array_const_func = ''
         self.func_code_list = []
         self.llvm_non_array_types = {'int': ('i32', '4'), 'bool': ('i1', '1'), 'double': ('double', '8'),
                                      'void': ('void', ''), 'char': ('i8', '8'), 'string': ('i8*', '8')}
@@ -32,7 +31,6 @@ class CodeGenerator:
 
     def generate(self):
         self.generate_inner(self.tree)
-        print(self.constants)
 
     def generate_inner(self, node: AstNode, current: FunctionCode = None):
         if len(node.children) > 0:
@@ -77,14 +75,15 @@ class CodeGenerator:
                         self.constants += const_name
                         self.const_count += 1
                         self.constants += self.get_str_const(str_len, node.val)
-                        const = ' getelementptr inbounds ([{0} x i8], [{0} x i8]* {1}, i64 0, i64 0)'.format(str_len,
-                                                                                                             const_name)
+                        const = 'getelementptr inbounds ([{0} x i8], [{0} x i8]* {1}, i32 0, i32 0)'.format(str_len,
+                                                                                                            const_name)
                     else:
                         const = str(node.val)
                     current.add_operation(('const', const, v_type))
 
-    def generate_with_func_code(self):
-        pass
+    @property
+    def llvm_code(self):
+        return '\n\n'.join((self.constants, *self.func_code_list))
 
     def generate_bin_op(self, node: BinOpNode, current: FunctionCode = None):
         if current:
@@ -113,7 +112,9 @@ class CodeGenerator:
                     llvm_type[0] = llvm_type[0].format(var.length.val, v_type)
                     current.add_alloc((*llvm_type, var.name.name))
                     self.generate_inner(var, current)
-        pass
+        else:
+            for var in node.vars_list:
+                self.generate_inner(var)
 
     def generate_assign(self, node: AssignNode, current: FunctionCode = None):
         if current:
@@ -122,7 +123,29 @@ class CodeGenerator:
             current.add_operation(('end_assign_var', ))
             self.generate_inner(node.val, current)
             current.add_operation(('end_assign_val', ))
-        pass
+        else:
+            if not isinstance(node.val, ConstNode):
+                raise AnalyzerError('Only constants are allowed in global')
+            v_type, name = self.llvm_non_array_types[node.name.v_type.type], node.name.name
+            const = '@{0} = global {1} '.format(name, v_type[0])
+            if v_type[0] == 'i8*':
+                const_name = '@.str_{0}'.format(self.const_count)
+                str_len = len(node.val.val) + 1
+                self.constants += const_name
+                self.const_count += 1
+                self.constants += self.get_str_const(str_len, node.val.val)
+                const += 'getelementptr inbounds ([{0} x i8], [{0} x i8]* {1}, i32 0, i32 0)'.format(str_len,
+                                                                                                     const_name)
+                const += ', align {0}\n'.format(v_type[1])
+            elif v_type[0] == 'i8':
+                const += '{0}, align {1}\n'.format(ord(node.val.val), v_type[1])
+            elif v_type[0] == 'double':
+                const += '{0:.6e}, align {1}\n'.format(node.val.val, v_type[1])
+            else:
+                const += '{0}, align {1}\n'.format(node.val.val, v_type[1])
+
+            self.constants += const
+            self.const_dict[name] = v_type[0]
 
     def generate_conditionals(self, node: Union[IfNode, WhileNode, ForNode, DoWhileNode], current: FunctionCode):
         if isinstance(node, IfNode):
@@ -173,22 +196,41 @@ class CodeGenerator:
     def generate_array(self, node: TypedArrayDeclNode, current: FunctionCode = None):
         if current:
             if len(node.contents) > 0:
-                current.add_operation(('array', len(node.contents)))
+                current.add_operation(('array', True, node.length.val, node.name.name, node.type.type))
                 for i, val in enumerate(node.contents):
                     self.generate_inner(val, current)
                     current.add_operation(('array_idx_{0}'.format(i), ))
-        pass
+            else:
+                current.add_operation(('array', False, node.length))
+            current.add_operation(('end_array', ))
+        else:
+            name, v_type = node.name.name, self.llvm_non_array_types[node.type.type][0]
+            const = '@{0} = global [{1} x {2}]'.format(name, node.length.val, v_type)
+            if len(node.contents) > 0:
+                const += ' ['
+                args = []
+                for var in node.contents:
+                    if not isinstance(var, ConstNode):
+                        raise AnalyzerError("Can't initialize global array with non-constant values")
+                    args.append('{0} {1}'.format(v_type, var.val))
+                const += ', '.join(args) + ']'
+            else:
+                const += ' zeroinitializer '
+
+            const += ', align {0}\n'.format(16 if v_type in ('i32', 'double') else 1)
+            self.constants += const
+            self.const_dict[name] = '[{0} x {1}]'.format(node.length.val, v_type)
 
     def generate_index(self, node: IndexNode, current: FunctionCode = None):
         if current:
             current.add_operation(('index', node.ident.name))
-            self.generate_inner(node.index)
+            self.generate_inner(node.index, current)
             current.add_operation(('end_index', ))
         pass
 
     def generate_cast(self, node: CastNode, current: FunctionCode = None):
         if current:
-            current.add_operation(('cast', node.from_.type, node.to_.type))
+            current.add_operation(('cast', self.get_ptr_type(node.from_)[0], self.get_ptr_type(node.to_)[0]))
             self.generate_inner(node.what, current)
             current.add_operation(('end_cast', ))
         pass
@@ -210,16 +252,13 @@ class CodeGenerator:
     def generate_function(self, node: TypedFuncDeclNode):
         params = [(*self.get_ptr_type(x.vars_list[0].v_type), x.vars_list[0].name) for x in node.params]
         r_type = self.get_ptr_type(node.r_type)
-        func_code = FunctionCode(node.name.name, r_type, *params)
+        func_code = FunctionCode(node.name.name, r_type, self.const_dict, *params)
         for stmt in node.stmts:
             self.generate_inner(stmt, func_code)
 
         func_code.add_operation(('end_func', ))
 
-        func_code.generate()
-        func_code.get_blocks()
-        self.func_code_list.append(func_code)
-        pass
+        self.func_code_list.append(func_code.code)
 
     def get_ptr_type(self, t: BaseType):
         if t.isArray:
@@ -231,4 +270,4 @@ class CodeGenerator:
     def get_str_const(self, length: int, string: str, is_array=False) -> str:
         if is_array:
             return ''
-        return ' constant [{0} x i8] c"{1}\\00", align 1'.format(length, string)
+        return ' = private constant [{0} x i8] c"{1}\\00", align 1\n'.format(length, string)

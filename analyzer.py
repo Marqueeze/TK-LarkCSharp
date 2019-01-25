@@ -289,7 +289,7 @@ class Analyzer:
         arr_type = copy.deepcopy(arr_type)
         arr_type.isArray = False
         index_node, index_type = self.analyze_inner(node.index)
-        index_node, res = self.get_cast(index_type, Int('int'), node)
+        index_node, res = self.get_cast(index_type, Int('int'), index_node)
         if res == -1:
             raise AnalyzerError("Index must be int, {0} given instead".format(index_type))
         new_node = IndexNode(arr_node, index_node, row=node.row, line=node.line)

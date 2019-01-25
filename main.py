@@ -8,30 +8,41 @@ def main():
     prog = '''
         
         int g = 1 - 2 - 3;
-        double t = 4 + 5;
+        int t = 4 + 5;
+        
+        double ssass = 12.45;
+        string ssdsdsds = "asdasdsad";
+        char sdasdasdwerqefe = 'a';
         
         string[] arr = new string[10];
         int[] kek = new int[]{ 1, 2, 3, 4, 5 };
         
-        void kkk(int k) {
-            for (int i = 0, j = 0; i < k; i = i + 1) {
-                i = i + j;
-                j = j + 1;
-                return;
+        void kkk(int a, int b) {
+            more (1, 2);
+            string ek = "Oh hi, Mark!";
+            while (g > t)
+            {
+                a = g + b;
+                do
+                {
+                    b = a - b * b;
+                }
+                while (a + b > a)
             }
             return;
         }
         
-        public int more(int i, int j)
+        public void more(int i, int j)
         {
-            double a = 12.112233;
+            string a = 's';
+            double c = 10;
             if (i > j) {
-                i = j + g;
+                return;
             }
             else {
-                j = i - g;
+                return;
             }
-            return j + 1;
+            return;
             double b = 123.1;
         }
         
@@ -43,6 +54,7 @@ def main():
             double ec = abc;
             bool[] tt = new bool[] { true, false, false, false}; 
             int[] abbbb = new int[] {1 + 2, 2, 3, 4 - abc};
+            abbbb[abc + 1] = eee;
             int eee = abbbb[0];
         }
         
@@ -67,7 +79,7 @@ def main():
         public static void whatElse(int a, int b) 
         {
             int c = 10 + 15 - what(a, a);
-            while (true)
+            while (89 < a)
             {
                 a = a + b;
                 do
@@ -85,6 +97,7 @@ def main():
     the_prog, _ = a.analyze(prog)
     gen = CodeGenerator(the_prog, '')
     gen.generate()
+    print(gen.llvm_code)
     # try:
     #     a.analyze(prog)
     # except ValueError as e:
