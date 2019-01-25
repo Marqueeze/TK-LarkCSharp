@@ -54,6 +54,8 @@ class CodeGenerator:
                 self.generate_cast(node, current)
             elif isinstance(node, CallNode):
                 self.generate_call(node, current)
+            elif isinstance(node, ReturnNode):
+                self.generate_return(node, current)
             else:
                 for child in node.children:
                     self.generate_inner(child, current)
@@ -191,15 +193,10 @@ class CodeGenerator:
             current.add_operation(('end_cast', ))
         pass
 
-    def generate_function(self, node: TypedFuncDeclNode):
-        params = [(*self.get_ptr_type(x.vars_list[0].v_type), x.vars_list[0].name) for x in node.params]
-        func_code = FunctionCode(node.name, self.llvm_non_array_types[node.r_type.type], *params)
-        for stmt in node.stmts:
-            self.generate_inner(stmt, func_code)
-
-        func_code.get_blocks()
-        func_code.generate()
-        self.func_code_list.append(func_code)
+    def generate_return(self, node: ReturnNode, current: FunctionCode):
+        current.add_operation(('return', ))
+        self.generate_inner(node.expr, current)
+        current.add_operation(('end_return', ))
 
     def generate_call(self, node: CallNode, current: FunctionCode = None):
         if current:
@@ -209,6 +206,19 @@ class CodeGenerator:
             for i, param in enumerate(node.params):
                 self.generate_inner(param, current)
                 current.add_operation(('end_call_param_{0}'.format(i), ))
+
+    def generate_function(self, node: TypedFuncDeclNode):
+        params = [(*self.get_ptr_type(x.vars_list[0].v_type), x.vars_list[0].name) for x in node.params]
+        r_type = self.get_ptr_type(node.r_type)
+        func_code = FunctionCode(node.name.name, r_type, *params)
+        for stmt in node.stmts:
+            self.generate_inner(stmt, func_code)
+
+        func_code.add_operation(('end_func', ))
+
+        func_code.generate()
+        func_code.get_blocks()
+        self.func_code_list.append(func_code)
         pass
 
     def get_ptr_type(self, t: BaseType):

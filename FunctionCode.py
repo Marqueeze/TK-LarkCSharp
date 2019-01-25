@@ -5,17 +5,17 @@ class FunctionCode:
     def __init__(self, name: str, r_type, *params):
         super().__init__()
         self.func_name = name
-        self.return_type = r_type
+        self.return_type = r_type[0]
         self.params = []
         self.variables = {}
         self.main_block = []
         self.counter = len(params) + 1
         self.main_code = ''
-        self.declaration_block = []
-        self.return_ptr = ''
+        self.return_ptr = '8w74eObinMa8S5FrkXmm'
         self.decl_code = ''
         self.align_dict = {}
         self.set_params(params)
+        self.set_return(r_type)
 
     def add_alloc(self, decl_code: Tuple):
         self.decl_code += '  %{0} = alloca {1}, align {2}'.format(self.counter, *decl_code[:-1]) + '\n'
@@ -39,6 +39,10 @@ class FunctionCode:
             self.params.append(param[0])
             self.add_alloc(param)
 
+    def set_return(self, r_type: Tuple):
+        if r_type[0] != 'void':
+            self.add_alloc((*r_type, self.return_ptr))
+
     def generate(self) -> str:
         func_code = 'define {0} @{1}({2})'.format(self.return_type, self.func_name, ', '.join(self.params))
         func_code += ' {' + '\n'
@@ -52,8 +56,7 @@ class FunctionCode:
                 func = getattr(self, op[0] + '_')
                 return func(op, op_list)
         except AttributeError:
-            print(self.main_code)
-            raise AttributeError
+            exit()
 
     def var_(self, op: Tuple, op_list: List):
         if op[1][0] == '@':
@@ -65,6 +68,9 @@ class FunctionCode:
         return True, var[0]
 
     def const_(self, op: Tuple, op_list: List):
+        if op[2] == 'double':
+            const = '{:.6e}'.format(float(op[1]))
+            return False, (const, op[2])
         return False, (op[1], op[2])
 
     def binop_(self, op: Tuple, op_list: List):
@@ -103,7 +109,6 @@ class FunctionCode:
         del op_list[: val_index]
 
         self.main_code += '  store {0} {1} {0}* {2}, align {3}\n'.format(v_type, val, var, self.align_dict[v_type])
-        self.counter += 1
 
         return self.generate_inner(op_list)
 
@@ -125,20 +130,31 @@ class FunctionCode:
         self.counter += 1
 
         self.generate_inner(then_list)
-        self.main_code += '  br label %{1}\n\n'
-        self.main_code += '{0}:\n'.format(self.counter)
-        else_counter = self.counter
-        self.counter += 1
+        if not self.main_code.endswith(self.return_ptr + '\n\n'):
+            self.main_code += '  br label %{1}\n\n'
+            self.main_code += '{0}:\n'.format(self.counter)
+            else_counter = self.counter
+            self.counter += 1
+        else:
+            self.main_code += '{0}:\n'.format(self.counter - 1)
+            else_counter = self.counter - 1
 
         is_else = if_list[then_index][1]
         if is_else:
             else_list = if_list[then_index + 1: -1]
             self.generate_inner(else_list)
-            self.main_code += '  br label %{1}\n\n'
-            self.main_code += '{0}:'.format(self.counter)
-            self.main_code = self.main_code.format(else_counter, self.counter)
+            if not self.main_code.endswith(self.return_ptr + '\n\n'):
+                self.main_code += '  br label %{1}\n\n'
+                self.main_code += '{0}:\n'.format(self.counter)
+                self.main_code = self.main_code.format(else_counter, self.counter)
+            else:
+                self.main_code += '{0}:\n'.format(self.counter)
+                self.main_code = self.main_code.format(else_counter)
         else:
-            self.main_code = self.main_code.format(else_counter, else_counter)
+            if not self.main_code.endswith(self.return_ptr + '\n\n'):
+                self.main_code = self.main_code.format(else_counter, else_counter)
+            else:
+                self.main_code = self.main_code.format(else_counter)
 
         self.counter += 1
 
@@ -163,11 +179,156 @@ class FunctionCode:
         self.main_code += '  br i1 %{0}, label %{1}, label %{2}\n\n{1}:\n'.format(self.counter - 1, self.counter, '{0}')
 
         self.generate_inner(body_list)
-        self.main_code += '  br label %{1}\n\n{0}:\n'
-        self.main_code = self.main_code.format(self.counter, cond_label)
+        if not self.main_code.endswith(self.return_ptr + '\n\n'):
+            self.main_code += '  br label %{0}\n\n{0}:\n'
+            self.main_code = self.main_code.format(self.counter, cond_label)
+            self.counter += 1
+        else:
+            self.main_code = self.main_code.format(self.counter - 1)
+
+        return self.generate_inner(op_list)
+
+    def do_while_(self, op: Tuple, op_list: List):
+        end_index = self.find('end_do_while', op[0], op_list)
+        do_while_list = op_list[: end_index]
+
+        del op_list[: end_index]
+
+        body_index = self.find('do_while_cond', op[0], do_while_list) - 1
+
+        body_list = do_while_list[: body_index]
+        cond_list = do_while_list[body_index + 1: -1]
+
+        self.main_code += '  br label %{0}\n\n{0}\n'.format(self.counter)
+        body_label = self.counter
+        self.counter += 1
+
+        self.generate_inner(body_list)
+        if not self.main_code.endswith(self.return_ptr + '\n\n'):
+            self.main_code += '  br label %{0}\n\n{0}:\n'.format(self.counter)
+            self.counter += 1
+
+        self.generate_inner(cond_list)
+        self.main_code += '  br i1 %{0}, label %{1}, label %{2}\n\n{2}:\n'.format(self.counter - 1, body_label,
+                                                                                  self.counter)
+
+        return self.generate_inner(op_list)
+
+    def for_(self, op: Tuple, op_list: List):
+        end_index = self.find('end_for', op[0], op_list)
+        for_list = op_list[: end_index]
+
+        del op_list[: end_index]
+
+        cond_index = self.find('cond_for', op[0], for_list) - 1
+        step_index = self.find('step_for', op[0], for_list) - 1
+        body_index = self.find('body_for', op[0], for_list) - 1
+
+        init_list = for_list[: cond_index]
+        cond_list = for_list[cond_index + 1: step_index]
+        step_list = for_list[step_index + 1: body_index]
+        body_list = for_list[body_index + 1: -1]
+
+        self.generate_inner(init_list)
+        self.main_code += '  br label %{0}\n\n{0}:\n'.format(self.counter)
+        cond_label = self.counter
+        self.counter += 1
+
+        self.generate_inner(cond_list)
+        self.main_code += '  br i1 %{0}, label %{1}, label %{2}\n\n{1}:\n'.format(self.counter - 1, self.counter, '{0}')
+        self.counter += 1
+
+        self.generate_inner(body_list)
+        if not self.main_code.endswith(self.return_ptr + '\n\n'):
+            self.main_code += '  br label %{0}\n\n{0}:\n'.format(self.counter)
+            self.counter += 1
+
+        self.generate_inner(step_list)
+        self.main_code += '  br label %{0}\n\n{1}:\n'.format(cond_label, self.counter)
+        self.main_code = self.main_code.format(self.counter)
         self.counter += 1
 
         return self.generate_inner(op_list)
+
+    def cast_(self, op: Tuple, op_list: List):
+        pass
+
+    def return_(self, op: Tuple, op_list: List):
+        if self.return_type == 'void':
+            self.return_void(op_list)
+        else:
+            ret_index = self.find('end_return', op[0], op_list)
+            return_list = op_list[: ret_index]
+            self.return_non_void(op_list, return_list)
+        # r_type = self.return_type
+        # ret_var = ''
+        #
+        # if self.return_type != 'void':
+        #     ret_val, _ = self.generate_inner(return_list)
+        #     ret_var = self.variables[self.return_ptr][2]
+        #     self.main_code += '  store {0} {1} {0}* {2}, align {3}\n'.format(r_type, ret_val,
+        #                                                                      ret_var, self.align_dict[r_type])
+        # self.main_code += self.return_ptr + '\n'
+        # self.main_code += '\n{0}\n'.format(self.counter)
+        #
+        # if op_list[-1][0] == 'end_func':
+        #     label_code = '  br label %{0}'.format(self.counter)
+        #     self.main_code = self.main_code.replace(self.return_ptr, label_code)
+        #     self.counter += 1
+        #     if self.return_type != 'void':
+        #         self.main_code += '  %{0} = load {1}, {1}*, %{2}, align {3}\n'.format(self.counter, r_type,
+        #                                                                               ret_var, self.align_dict[r_type])
+
+
+        #self.counter += 1
+        op_list.clear()
+
+    def return_void(self, op_list: List):
+        if op_list[-1][0] == 'end_func' and self.return_ptr not in self.main_code:
+            self.main_code += '  ret void\n'
+            return
+
+        self.main_code += self.return_ptr + '\n\n'
+
+        if op_list[-1][0] == 'end_func':
+            if self.return_ptr in self.main_code:
+                self.main_code += '{0}:\n'.format(self.counter)
+                label_code = '  br label %{0}'.format(self.counter)
+                self.main_code = self.main_code.replace(self.return_ptr, label_code)
+                self.main_code += '  ret void\n'
+        self.counter += 1
+        return
+
+    def return_non_void(self, op_list: List, ret_list: List):
+        val, v_type = self. get_arg(ret_list)
+
+        if op_list[-1][0] == 'end_func' and self.return_ptr not in self.main_code:
+            self.main_code += '  ret {0} {1}'.format(v_type, val)
+            return
+
+        ret_var = self.variables[self.return_ptr][2]
+        self.main_code += '  store {0} {1}, {0}* %{2}, align {3}\n'.format(v_type, val, ret_var,
+                                                                           self.align_dict[v_type])
+
+        self.main_code += self.return_ptr + '\n\n'
+
+        if op_list[-1][0] == 'end_func':
+            if self.return_ptr in self.main_code:
+                self.main_code += '{0}:\n'.format(self.counter)
+                label_code = '  br label %{0}'.format(self.counter)
+                self.main_code = self.main_code.replace(self.return_ptr, label_code)
+                self.counter += 1
+                self.main_code += '  %{0} = load {1}, {1}*, %{2}, align {3}\n'.format(self.counter, v_type,
+                                                                                      ret_var, self.align_dict[v_type])
+                self.main_code += '  ret {0} %{1}'.format(v_type, self.counter)
+        self.counter += 1
+        return
+
+    def call_(self, op: Tuple, op_list: List):
+        pass
+
+    def end_func_(self, op: Tuple, op_list: List):
+        self.main_code += '  ret void'
 
     def find(self, query: str, op: str, op_list):
         support_stack = []

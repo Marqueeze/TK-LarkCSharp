@@ -13,21 +13,33 @@ def main():
         string[] arr = new string[10];
         int[] kek = new int[]{ 1, 2, 3, 4, 5 };
         
+        void kkk(int k) {
+            for (int i = 0, j = 0; i < k; i = i + 1) {
+                i = i + j;
+                j = j + 1;
+                return;
+            }
+            return;
+        }
+        
         public int more(int i, int j)
         {
+            double a = 12.112233;
             if (i > j) {
-                return i;
+                i = j + g;
             }
             else {
                 j = i - g;
             }
-            return j;
+            return j + 1;
+            double b = 123.1;
         }
         
         void pppppppp(int abc, char[] thhhh) { 
-            while (10 < abc) {
+            do {
                 abc = abc + 1;
             }
+            while (10 < abc);
             double ec = abc;
             bool[] tt = new bool[] { true, false, false, false}; 
             int[] abbbb = new int[] {1 + 2, 2, 3, 4 - abc};

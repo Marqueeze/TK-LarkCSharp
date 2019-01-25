@@ -171,12 +171,11 @@ class MelASTBuilder(InlineTransformer):
         elif item == 'char':
             def get_node(*args):
                 props = {}
-                if len(args) == 1 and isinstance(args[0], Token):
+                if len(args) == 3 and isinstance(args[0], Token):
                     props['token'] = args[0]
                     props['line'] = args[0].line
                     props['column'] = args[0].column
-                    args = [args[0].value]
-                return LiteralNode(args[0].value + args[1].value + args[2].value, **props)
+                return LiteralNode(args[0].value + args[1].value + args[0].value, **props)
             return get_node
         else:
             def get_node(*args):

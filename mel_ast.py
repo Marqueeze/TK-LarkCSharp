@@ -220,7 +220,7 @@ class DoWhileNode(AstNode):
 
     @property
     def children(self) -> Tuple[AstNode, ...]:
-        return self.cond, self.body
+        return self.body, self.cond
 
     def __str__(self) -> str:
         return 'do_while'
