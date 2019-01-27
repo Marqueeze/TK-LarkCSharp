@@ -65,20 +65,18 @@ bipush 3
 invokevirtual test.factorial (i)i
 istore 1
 l1:
-ldc2_w 6
 getstatic java/lang/system.out : ljava/io/printstream;
-none
+ldc "6"
 invokevirtual java/io/printstream.println (ljava/lang/string;)v
 l2:
 aload 0
 getfield 1
-ldc "int(const, v_type - 1)"
-iload
+bipush 1
+iaload
 istore 1
 l3:
-ldc2_w 3
 getstatic java/lang/system.out : ljava/io/printstream;
-none
+ldc "3"
 invokevirtual java/io/printstream.println (ljava/lang/string;)v
 l4:
 return

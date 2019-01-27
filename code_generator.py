@@ -157,7 +157,7 @@ class CodeGenerator:
         elif type(var) == BinOpNode:
             self.generate_binop(var, scope)
         elif type(var) == IndexNode:
-            self.fill_value_and_its_type(ConstNode("int", var.index.value))
+            self.fill_value_and_its_type(var.index.value)
         elif scope.parent is None:
             self.get_global_var_value(var.name)
         else:
@@ -290,15 +290,14 @@ class CodeGenerator:
     def fill_value_and_its_type(self, value):
         if type(value) == bool:
             self.write("{0}_{1}\r\n".format("ICONST", "1" if str(value) == "True" else "0"))
+        elif type(value) == str:
+            self.write("{0} \"{1}\"\r\n".format("LDC", value))
         else:
-            try:
-                _ = int(value)
-                if _ != value:
-                    self.write("{0} {1}\r\n".format("LDC2_W", value))
-                else:
-                    self.write("{0} {1}\r\n".format(self.number_type(value), value))
-            except Exception:
-                self.write("{0} \"{1}\"\r\n".format("LDC", value))
+            _ = int(value)
+            if _ != value:
+                self.write("{0} {1}\r\n".format("LDC2_W", value))
+            else:
+                self.write("{0} {1}\r\n".format(self.number_type(value), value))
 
     @staticmethod
     def number_type(number):
@@ -381,7 +380,7 @@ class CodeGenerator:
     def generate_index(self, index, scope):
         self.get_var_value(index.ident, scope)
         self.get_var_value(index.index, scope)
-        self.write("{0}LOAD\r\n".format(self.types_return_dict[index.ident.v_type.type]))
+        self.write("{0}ALOAD\r\n".format(self.types_return_dict[index.ident.v_type.type]))
 
 
 
@@ -507,7 +506,6 @@ class CodeGenerator:
                    + 'INVOKEVIRTUAL java/io/BufferedReader.readLine ()Ljava/lang/String;\r\n')
 
     def generate_output(self, what, scope):
-        self.write('GETSTATIC java/lang/System.out : Ljava/io/PrintStream;\r\n'
-                   + '{0}\r\n'.format(self.get_var_value(what, scope))
-                   + 'INVOKEVIRTUAL java/io/PrintStream.println (Ljava/lang/String;)V\r\n'
-                   )
+        self.write('GETSTATIC java/lang/System.out : Ljava/io/PrintStream;\r\n')
+        self.get_var_value(what, scope)
+        self.write('INVOKEVIRTUAL java/io/PrintStream.println (Ljava/lang/String;)V\r\n')
