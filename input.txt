@@ -1,5 +1,19 @@
-public void func(int i, int j){
-                func(1, 2);
-                string s = Readline();
-                WriteLine(s);
-             }
+int[] arr = new int[] {4, 3, 2};
+string str = "Hello";
+
+public int factorial(int n)
+{
+int s = 1;
+for (int i = 1; i <= n; i = i + 1)
+{
+	s = s * i;
+}
+return s;
+}
+
+public void do(){
+int out = factorial(3);
+writeline("6");
+out = arr[1];
+writeline("3");
+}
