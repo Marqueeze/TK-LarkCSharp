@@ -308,10 +308,13 @@ class Analyzer:
             result = getattr(scope, key)[query]
             return result
         except KeyError:
-            if query.lower() in ("readline", "read") and key == "funcs":
-                return {'r': 'string', 'p': ''}
-            elif query.lower() in ("writeline", "write") and key == "funcs":
-                return {'r': 'void', 'p': ['string']}
+            if key == "funcs":
+                if query.lower() in ("readline", "read"):
+                    return {'r': 'string', 'p': ['']}
+                elif query.lower() in ("writeline", "write"):
+                    return {'r': 'void', 'p': ['string']}
+                elif query.lower() == 'str':
+                    return {'r': 'string', 'p': ['double']}
             if scope.parent is None:
                 raise AnalyzerError('{0} with id "{1}" not found'.format(key[:-1], query))
             else:

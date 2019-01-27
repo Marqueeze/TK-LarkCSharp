@@ -158,6 +158,10 @@ class CodeGenerator:
             self.generate_binop(var, scope)
         elif type(var) == IndexNode:
             self.fill_value_and_its_type(var.index.value)
+        elif type(var) == CallNode:
+            self.generate_func_call(var, scope, True)
+        elif type(var) == CastNode:
+            self.generate_cast(var, scope)
         elif scope.parent is None:
             self.get_global_var_value(var.name)
         else:
@@ -260,7 +264,8 @@ class CodeGenerator:
             raise Exception("GOT ANOTHER STATEMENT (codeGen line 196)")
 
     def generate_func_call(self, call, scope, assigning=False):
-        self.write("ALOAD 0\r\n")
+        if call.func.name.lower() not in ("str", "write", "writeline", "read", "readline"):
+            self.write("ALOAD 0\r\n")
         for param in call.params:
             self.get_var_value(param, scope)
         self.write("INVOKEVIRTUAL test.{0} ({1}){2}\r\n"
@@ -509,3 +514,6 @@ class CodeGenerator:
         self.write('GETSTATIC java/lang/System.out : Ljava/io/PrintStream;\r\n')
         self.get_var_value(what, scope)
         self.write('INVOKEVIRTUAL java/io/PrintStream.println (Ljava/lang/String;)V\r\n')
+
+    def to_string(self, what):
+        return "{0}".format(what)

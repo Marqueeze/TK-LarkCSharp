@@ -66,7 +66,9 @@ invokevirtual test.factorial (i)i
 istore 1
 l1:
 getstatic java/lang/system.out : ljava/io/printstream;
-ldc "6"
+iload 1
+i2d
+invokevirtual test.str (d)ljava/lang/string;
 invokevirtual java/io/printstream.println (ljava/lang/string;)v
 l2:
 aload 0
@@ -76,7 +78,9 @@ iaload
 istore 1
 l3:
 getstatic java/lang/system.out : ljava/io/printstream;
-ldc "3"
+iload 1
+i2d
+invokevirtual test.str (d)ljava/lang/string;
 invokevirtual java/io/printstream.println (ljava/lang/string;)v
 l4:
 return

@@ -35,7 +35,7 @@ return s;
 
 public void do(){
 int out = factorial(3);
-writeline("6");
+writeline(str(out));
 out = arr[1];
-writeline("3");
+writeline(str(out));
 } ''')
