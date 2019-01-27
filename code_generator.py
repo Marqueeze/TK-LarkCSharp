@@ -57,7 +57,7 @@ class CodeGenerator:
         self.write(param_string + "{0} {1}\r\n".format(
             self.types_prefixes_dict[node.children[0].name[:shift]],
             node.children[1].name.name))
-        self.scope.vars[node.children[1].name.name] = "test.{0} : {1}" \
+        self.scope.vars[node.children[1].name.name] = "test.{0} {1}" \
             .format(node.children[1].name.name,
                     self.types_prefixes_dict[node.children[0].name[:shift]])
 
@@ -128,14 +128,14 @@ class CodeGenerator:
 
     def generate_string_op(self, op, scope):
         self.write("NEW java/lang/StringBuilder\r\n" + "DUP\r\n" +
-                   "INVOKESPECIAL java/lang/StringBuilder.<init> ()V\r\n")
+                   "INVOKESPECIAL java/lang/StringBuilder.<init>()V\r\n")
         self.get_var_value(op.arg1, scope)
         self.write("INVOKEVIRTUAL java/lang/StringBuilder.append" +
-                   " (Ljava/lang/String;)Ljava/lang/StringBuilder;\r\n")
+                   "(Ljava/lang/String;)Ljava/lang/StringBuilder;\r\n")
         self.get_var_value(op.arg2, scope)
-        self.write("INVOKEVIRTUAL java/lang/StringBuilder.append "
+        self.write("INVOKEVIRTUAL java/lang/StringBuilder.append"
                    + "(Ljava/lang/String;)Ljava/lang/StringBuilder;\r\n"
-                   + "INVOKEVIRTUAL java/lang/StringBuilder.toString ()Ljava/lang/String;\r\n")
+                   + "INVOKEVIRTUAL java/lang/StringBuilder.toString()Ljava/lang/String;\r\n")
         return TypedNode("", op.arg1.v_type, '')
 
     def put_value_on_stack(self, val, scope):
@@ -268,7 +268,7 @@ class CodeGenerator:
             self.write("ALOAD 0\r\n")
         for param in call.params:
             self.get_var_value(param, scope)
-        self.write("INVOKEVIRTUAL test.{0} ({1}){2}\r\n"
+        self.write("INVOKEVIRTUAL test.{0}({1}){2}\r\n"
                    .format(call.func.name,
                            ''.join(self.types_prefixes_dict[x.type] for x in call.func.param_types),
                            self.types_prefixes_dict[call.func.r_type.type]))
@@ -317,7 +317,7 @@ class CodeGenerator:
         if 'string' in str(node).lower():
             self.write("ANEWARRAY java/lang/String\r\n")
         else:
-            self.write("NEWARRAY T_{0}\r\n".format(node.type.v_type))
+            self.write("NEWARRAY {0}\r\n".format(node.type.v_type))
 
     def fill_array(self, node):
         for i in range(0, len(node.contents)):
@@ -327,14 +327,14 @@ class CodeGenerator:
             self.write("{0}ASTORE\r\n".format(self.types_prefixes_dict[node.type.v_type]))
 
     def put_array_in_scope(self, node, scope):
-        self.put_param_in_scope(node.name.name, str(node.type), scope)
         if scope != self.scope:
+            self.put_param_in_scope(node.name.name, str(node.type), scope)
             self.write("ASTORE {0}\r\n".format(self.get_var_value(node.name, scope)))
         # else:
         #     self.putfield(node)
 
     def putfield(self, node):
-        self.write("PUTFIELD test.{0} : {1}\r\n".format(str(node.name.name), self.field_type(node)))
+        self.write("PUTFIELD test.{0}  {1}\r\n".format(str(node.name.name), self.field_type(node)))
 
     def field_type(self, node):
         return '[{0}'.format(self.types_prefixes_dict[node.type.v_type]) \
@@ -505,15 +505,15 @@ class CodeGenerator:
                    + 'DUP\r\n'
                    + 'NEW java/io/InputStreamReader\r\n'
                    + 'DUP\r\n'
-                   + 'GETSTATIC java/lang/System.in : Ljava/io/InputStream;\r\n'
-                   + 'INVOKESPECIAL java/io/InputStreamReader.<init> (Ljava/io/InputStream;)V\r\n'
-                   + 'INVOKESPECIAL java/io/BufferedReader.<init> (Ljava/io/Reader;)V\r\n'
-                   + 'INVOKEVIRTUAL java/io/BufferedReader.readLine ()Ljava/lang/String;\r\n')
+                   + 'GETSTATIC java/lang/System.in  Ljava/io/InputStream;\r\n'
+                   + 'INVOKESPECIAL java/io/InputStreamReader.<init>(Ljava/io/InputStream;)V\r\n'
+                   + 'INVOKESPECIAL java/io/BufferedReader.<init>(Ljava/io/Reader;)V\r\n'
+                   + 'INVOKEVIRTUAL java/io/BufferedReader.readLine()Ljava/lang/String;\r\n')
 
     def generate_output(self, what, scope):
-        self.write('GETSTATIC java/lang/System.out : Ljava/io/PrintStream;\r\n')
+        self.write('GETSTATIC java/lang/System.out  Ljava/io/PrintStream;\r\n')
         self.get_var_value(what, scope)
-        self.write('INVOKEVIRTUAL java/io/PrintStream.println (Ljava/lang/String;)V\r\n')
+        self.write('INVOKEVIRTUAL java/io/PrintStream.println(Ljava/lang/String;)V\r\n')
 
     def to_string(self, what):
         return "{0}".format(what)
